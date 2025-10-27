@@ -1,0 +1,48 @@
+@HOST=https://unifi-api-jlq9.onrender.com
+@API_KEY=
+# @JWT=
+@USER_ID=
+
+###
+# @name Health
+GET {{HOST}}/healthz
+Authorization: Bearer {{API_KEY}}
+
+###
+# @name FetchPreOcpNetBalance
+@CHAIN=Sepolia
+@COIN=USDT
+GET {{HOST}}/payment/onchain/net_balance/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+Authorization: Bearer {{API_KEY}}
+
+###
+# @name FetchPreOcpTotalEstFees
+@CHAIN=Sepolia
+@COIN=USDT
+GET {{HOST}}/payment/onchain/est_fee/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+Authorization: Bearer {{API_KEY}}
+
+###
+# @name FetchPreOcpBalanceAndEstFees
+@CHAIN=Sepolia
+@COIN=USDT
+GET {{HOST}}/payment/onchain/balance_est_fees/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+Authorization: Bearer {{API_KEY}}
+
+###
+# @name RequestFaucet
+@CHAIN=Sepolia
+@COIN=USDT
+POST {{HOST}}/faucet/{{USER_ID}}/{{COIN}}/{{CHAIN}}
+Authorization: Bearer {{API_KEY}}
+
+###
+# @name GetWalletBalancesByChain
+@CHAIN=Sepolia
+GET {{HOST}}/wallet/balances/by_chain/{{USER_ID}}/{{CHAIN}}
+Authorization: Bearer {{API_KEY}}
+
+###
+# @name GetWalletBalancesByCoin
+GET {{HOST}}/wallet/balances/by_coin/{{USER_ID}}/{{COIN}}
+Authorization: Bearer {{API_KEY}}
