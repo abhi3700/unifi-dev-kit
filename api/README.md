@@ -41,7 +41,16 @@ To start using the UniFi API, you’ll need to create an API key.
       <img src="../res/new_api_key6.png" alt="API key created" width="40%" height="auto">
     </p>
 
-1. **Copy and Store Your API Key Securely** \
+1. **Monitor Your API Credits Usage** \
+   You can track your remaining credits, expiry in real-time on the same dashboard.
+
+    <p align="left">
+      <img src="../res/new_api_key9.png" alt="View Credits" width="40%" height="auto">
+    </p>
+
+    > 💡 **Note:** The FREE plan includes **100,000 API credits** by default — perfect for testing and initial integration.
+
+2. **Copy and Store Your API Key Securely** \
    Copy the key by clicking the **copy icon** and save it in a secure place (e.g., environment variable or secrets manager).   \
    You’ll need this key to authenticate all your API requests.
 
