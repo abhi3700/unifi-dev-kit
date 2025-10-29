@@ -13,39 +13,33 @@ GET {{HOST}}/healthz
 
 ### 
 # @name FetchPreOcpNetBalance
-@CHAIN=Sepolia
-@COIN=USDT
-GET {{HOST}}/payment/onchain/net_balance/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+@chain=Sepolia
+@coin=USDT
+GET {{HOST}}/payment/onchain/net_balance/{{USER_ID}}/{{chain}}/{{coin}}
 {{AUTH_HEADER}}
 
 ###
 # @name FetchPreOcpTotalEstFees
-@CHAIN=Sepolia
-@COIN=USDT
-GET {{HOST}}/payment/onchain/est_fee/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+@chain=Sepolia
+@coin=USDT
+GET {{HOST}}/payment/onchain/est_fee/{{USER_ID}}/{{chain}}/{{coin}}
 {{AUTH_HEADER}}
 
 ###
 # @name FetchPreOcpBalanceAndEstFees
-@CHAIN=Sepolia
-@COIN=USDT
-GET {{HOST}}/payment/onchain/balance_est_fees/{{USER_ID}}/{{CHAIN}}/{{COIN}}
-{{AUTH_HEADER}}
-
-###
-# @name RequestFaucet
-@CHAIN=Sepolia
-@COIN=USDT
-POST {{HOST}}/faucet/{{USER_ID}}/{{COIN}}/{{CHAIN}}
+@chain=Sepolia
+@coin=USDT
+GET {{HOST}}/payment/onchain/balance_est_fees/{{USER_ID}}/{{chain}}/{{coin}}
 {{AUTH_HEADER}}
 
 ###
 # @name GetWalletBalancesByChain
-@CHAIN=Sepolia
-GET {{HOST}}/wallet/balances/by_chain/{{USER_ID}}/{{CHAIN}}
+@chain=Sepolia
+GET {{HOST}}/wallet/balances/by_chain/{{USER_ID}}/{{chain}}
 {{AUTH_HEADER}}
 
 ###
 # @name GetWalletBalancesByCoin
-GET {{HOST}}/wallet/balances/by_coin/{{USER_ID}}/{{COIN}}
+@coin=USDC
+GET {{HOST}}/wallet/balances/by_coin/{{USER_ID}}/{{coin}}
 {{AUTH_HEADER}}
