@@ -32,11 +32,13 @@ File path:
     "rest-client.environmentVariables": {
         "prod": {
             "base_url": "https://unifi-api-jlq9.onrender.com",
-            "api_key": ""
+            "api_key": "YOUR_API_KEY"
         }
     }
 }
 ```
+
+Replace `YOUR_API_KEY` with your one. Refer [this](./api/README.md#-get-your-api-key)
 
 #### 🧭 Selecting the Environment
 
