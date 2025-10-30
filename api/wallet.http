@@ -11,6 +11,16 @@
 # @name Health
 GET {{HOST}}/healthz
 
+###
+# @name GetUserWalletAddress
+GET {{HOST}}/wallet/address/{{USER_ID}}/Ethereum
+{{AUTH_HEADER}}
+
+###
+# @name GetUserWalletAddresses
+GET {{HOST}}/wallet/addresses/{{USER_ID}}
+{{AUTH_HEADER}}
+
 ### 
 # @name FetchPreOcpNetBalance
 @chain=Sepolia
