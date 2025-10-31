@@ -1,0 +1,49 @@
+### Profile
+@name = Profile
+@details = Create, Modify, View profile.
+
+### Environment Variables
+@HOST= {{base_url}}
+@USER_ID={{user_id}}
+@AUTH_HEADER = Authorization: Bearer {{api_key}}
+@CONTENT_TYPE = Content-Type: application/json
+
+###
+# @name Health
+GET {{HOST}}/healthz
+{{AUTH_HEADER}}
+
+###
+# @name GetUID
+GET {{HOST}}/user/uid/{{USER_ID}}
+{{AUTH_HEADER}}
+
+###
+# Use to get payment notification on UniFi App, when anyone requests payment from you.
+# @name GetPID
+GET {{HOST}}/user/pid/{{USER_ID}}
+{{AUTH_HEADER}}
+
+###
+# Generate a new PID when you get unwanted payment notification 🔔.
+# And then share with your preferred payment requester.
+# @name GenerateNewPID
+POST {{HOST}}/user/pid/{{USER_ID}}
+{{AUTH_HEADER}}
+
+###
+# @name GetUserProfile
+GET {{HOST}}/profile/{{USER_ID}}
+{{AUTH_HEADER}}
+
+###
+# @name SetUserProfile
+POST {{HOST}}/profile/{{USER_ID}}
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+    "name": "Abhijit",
+    "nickname": "Obhi",
+    "preferred_fiat_currency": "USD"
+}
