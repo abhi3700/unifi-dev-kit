@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "sdk",
+    "primitives",
+]
+resolver = "2"
