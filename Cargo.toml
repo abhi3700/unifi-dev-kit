@@ -2,5 +2,9 @@
 members = [
     "sdk",
     "primitives",
+    "examples",
 ]
 resolver = "2"
+
+[workspace.dependencies]
+unifi-sdk-primitives = { path = "primitives/" }
