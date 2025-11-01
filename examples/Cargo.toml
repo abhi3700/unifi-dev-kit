@@ -6,6 +6,10 @@ edition = "2024"
 # ======= Pay =======
 
 [[example]]
+name = "pay"
+path = "examples/pay/pay.rs"
+
+[[example]]
 name = "pay_history"
 path = "examples/pay/pay_history.rs"
 
@@ -31,4 +35,4 @@ eyre = "0.6.12"
 spinoff = {version = "0.8.0",features = ["arc", "line", "dots"]}
 tokio = { version =  "1.46.1", features = ["rt-multi-thread"] }
 unifi-sdk-rs ={ path = "../sdk" }
-unifi-sdk-primitives.workspace = true
+unifi-sdk-primitives = {workspace = true, features = ["utils"]}

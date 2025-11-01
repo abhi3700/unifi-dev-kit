@@ -209,6 +209,38 @@ impl FromStr for StableCoin {
 	}
 }
 
+pub trait StableCoinTrait {
+	fn all() -> &'static [StableCoin];
+	fn decimals(&self) -> u8;
+	fn from_strr(stablecoin: &str) -> eyre::Result<StableCoin>;
+}
+
+impl StableCoinTrait for StableCoin {
+	fn all() -> &'static [StableCoin] {
+		use StableCoin as S;
+		&[S::USDT, S::USDC, S::DAI]
+	}
+
+	fn decimals(&self) -> u8 {
+		use StableCoin as S;
+		match self {
+			S::USDT => 6,
+			S::USDC => 6,
+			S::DAI => 18,
+		}
+	}
+
+	fn from_strr(stablecoin: &str) -> eyre::Result<Self> {
+		use StableCoin as S;
+		match stablecoin.to_uppercase().as_str() {
+			"USDT" => Ok(S::USDT),
+			"USDC" => Ok(S::USDC),
+			"DAI" => Ok(S::DAI),
+			_ => Err(eyre::eyre!(format!("Invalid stablecoin: {}", stablecoin))),
+		}
+	}
+}
+
 /// All coins (network/gas + stablecoins) supported by OmniPay
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone)]
