@@ -3,7 +3,7 @@
 use colored::Colorize;
 use unifi_examples::{init_sdk, take_input};
 use unifi_sdk_primitives::{
-	types::{ChainName, StableCoin, StableCoinTrait},
+	types::{ChainName, StableCoin},
 	utils::is_value_gte,
 };
 

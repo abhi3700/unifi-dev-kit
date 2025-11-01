@@ -209,19 +209,13 @@ impl FromStr for StableCoin {
 	}
 }
 
-pub trait StableCoinTrait {
-	fn all() -> &'static [StableCoin];
-	fn decimals(&self) -> u8;
-	fn from_strr(stablecoin: &str) -> eyre::Result<StableCoin>;
-}
-
-impl StableCoinTrait for StableCoin {
-	fn all() -> &'static [StableCoin] {
+impl StableCoin {
+	pub fn all() -> &'static [StableCoin] {
 		use StableCoin as S;
 		&[S::USDT, S::USDC, S::DAI]
 	}
 
-	fn decimals(&self) -> u8 {
+	pub fn decimals(&self) -> u8 {
 		use StableCoin as S;
 		match self {
 			S::USDT => 6,
@@ -230,7 +224,7 @@ impl StableCoinTrait for StableCoin {
 		}
 	}
 
-	fn from_strr(stablecoin: &str) -> eyre::Result<Self> {
+	pub fn from_strr(stablecoin: &str) -> eyre::Result<Self> {
 		use StableCoin as S;
 		match stablecoin.to_uppercase().as_str() {
 			"USDT" => Ok(S::USDT),
