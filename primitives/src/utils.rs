@@ -1,7 +1,4 @@
-use crate::{
-	errors::UfiError,
-	types::{StableCoin, StableCoinTrait},
-};
+use crate::{errors::UfiError, types::StableCoin};
 use alloy_primitives::{
 	U256,
 	utils::{format_units, parse_units},
