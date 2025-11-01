@@ -1,0 +1,34 @@
+[package]
+name = "unifi-examples"
+version = "0.1.0"
+edition = "2024"
+
+# ======= Pay =======
+
+[[example]]
+name = "pay_history"
+path = "examples/pay/pay_history.rs"
+
+# ======= Wallet =======
+
+[[example]]
+name = "wallet_balances"
+path = "examples/wallet/balances.rs"
+
+[[example]]
+name = "wallet_address"
+path = "examples/wallet/address.rs"
+
+[[example]]
+name = "wallet_addresses"
+path = "examples/wallet/addresses.rs"
+
+
+[dependencies]
+colored = "3.0.0"
+dotenvy = "0.15.7"
+eyre = "0.6.12"
+spinoff = {version = "0.8.0",features = ["arc", "line", "dots"]}
+tokio = { version =  "1.46.1", features = ["rt-multi-thread"] }
+unifi-sdk-rs ={ path = "../sdk" }
+unifi-sdk-primitives.workspace = true

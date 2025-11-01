@@ -11,4 +11,4 @@ reqwest = {version = "0.12.15", features = ["json"]}
 serde = { version = "1.0.219", features = ["derive"] }
 thiserror = "2.0.12"
 tokio = { version =  "1.46.1", features = ["time", "macros"]}
-unifi-sdk-primitives = {path = "../primitives"}
+unifi-sdk-primitives.workspace = true
