@@ -10,6 +10,7 @@
 //! 2. User if scrolls-up more even after reaching end, then loads the next page & then if further
 //!    scrolls-up, then loads next page & likewise it keeps going.
 
+use colored::Colorize;
 use unifi_examples::{init_sdk, take_input};
 use unifi_sdk_primitives::types::{OcPayHistory, PayHistoryFilterParams};
 
@@ -28,7 +29,7 @@ async fn main() -> eyre::Result<()> {
 	// is no next receipts.
 	println!("========================= Page-1 =========================");
 	let OcPayHistory { receipts, .. } = sdk.get_ocp_receipts(user_id, true, true, None).await?;
-	println!("{:#?}", receipts);
+	println!("{}", format!("{:#?}", receipts).green().bold());
 
 	let mut count = receipts.len();
 	while let Ok(next_page) = sdk
@@ -43,7 +44,7 @@ async fn main() -> eyre::Result<()> {
 		println!("========================= NEXT ... =========================");
 		// NOTE: on purpose, didn't use receipts field as in the display I want to see each page's
 		// Prev & Next values.
-		println!("{:#?}", next_page);
+		println!("{}", format!("{:#?}", next_page).green().bold());
 		count += next_page.receipts.len();
 
 		if !next_page.has_next {
@@ -51,7 +52,7 @@ async fn main() -> eyre::Result<()> {
 		}
 	}
 
-	println!("Total receipts: {}", count);
+	println!("{}", format!("Total receipts: {}", count).bold().blue());
 
 	Ok(())
 }
