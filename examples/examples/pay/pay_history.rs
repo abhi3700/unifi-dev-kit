@@ -11,13 +11,20 @@
 //!    scrolls-up, then loads next page & likewise it keeps going.
 
 use colored::Colorize;
-use unifi_examples::{init_sdk, take_input};
+use unifi_examples::{init_sdk, take_input, with_spinner};
 use unifi_sdk_primitives::types::{OcPayHistory, PayHistoryFilterParams};
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
 	let sdk = init_sdk();
-	sdk.health_check().await?;
+	with_spinner(
+		spinoff::spinners::Dots.into(),
+		"🩺 Checking API health...".to_string(),
+		sdk.health_check(),
+		Some("✅ API is healthy!".to_string()),
+		true,
+	)
+	.await?;
 
 	println!("================================================");
 

@@ -1,7 +1,6 @@
-//! View wallet addresses across chain protocols.
+//! Pay Receipt
 
-use colored::*;
-use unifi_examples::{init_sdk, take_input, with_spinner};
+use unifi_examples::{display_pay_receipt, init_sdk, take_input, with_spinner};
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
@@ -17,19 +16,20 @@ async fn main() -> eyre::Result<()> {
 
 	println!("================================================");
 
-	let user_id = &take_input("Enter a valid User ID: ")?;
+	let receipt_id = &take_input("Enter a valid Pay Receipt ID: ")?;
 
 	println!("================================================");
 
-	let addresses = with_spinner(
+	let pay_receipt = with_spinner(
 		spinoff::spinners::Dots.into(),
-		format!("Fetching wallet addresses ").yellow().to_string(),
-		sdk.get_user_wallet_addresses(user_id),
-		Some(format!("Wallet addresses: ").bold().to_string()),
+		"⏳ Fetching receipt...".to_string(),
+		sdk.get_ocp_receipt(receipt_id),
+		Some("✅ Fetching receipt done!".to_string()),
 		true,
 	)
 	.await?;
-	println!("{}", format!("{:#?}", addresses).green().bold());
+
+	display_pay_receipt(pay_receipt);
 
 	Ok(())
 }

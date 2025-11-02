@@ -10,6 +10,10 @@ name = "pay"
 path = "examples/pay/pay.rs"
 
 [[example]]
+name = "pay_receipt"
+path = "examples/pay/pay_receipt.rs"
+
+[[example]]
 name = "pay_history"
 path = "examples/pay/pay_history.rs"
 
@@ -29,6 +33,7 @@ path = "examples/wallet/addresses.rs"
 
 
 [dependencies]
+chrono = "0.4.40"
 colored = "3.0.0"
 dotenvy = "0.15.7"
 eyre = "0.6.12"

@@ -75,8 +75,7 @@ pub fn sanitize_and_parse_amount(amount: &str, coin: StableCoin) -> eyre::Result
 /// Validates the amount (with est. fees) against the user's balance.
 ///
 /// ## Notes
-/// - balance & est_fees are fetched via fn `get_oc_chain_coin_balance` &
-///   `fetch_pre_ocp_total_est_fees` respectively.
+/// - balance & est_fees, is_allowance_zero are fetched via fn `fetch_pre_ocp_balance_and_est_fees`.
 /// - In the FE as these are already fetched once & values shown in UI, we don't need to fetch again
 ///   inside the fn. That's why we are using the fetched values.
 ///

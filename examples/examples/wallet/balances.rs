@@ -7,7 +7,14 @@ use unifi_sdk_primitives::types::{ChainName, StableCoin};
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
 	let sdk = init_sdk();
-	sdk.health_check().await?;
+	with_spinner(
+		spinoff::spinners::Dots.into(),
+		"🩺 Checking API health...".to_string(),
+		sdk.health_check(),
+		Some("✅ API is healthy!".to_string()),
+		true,
+	)
+	.await?;
 
 	let selected_chain = ChainName::Sepolia;
 	let selected_coin = StableCoin::USDT;
