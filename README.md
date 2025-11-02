@@ -8,58 +8,16 @@
 
 ## API
 
-### 🔗 **API Configuration Guide**
+Need direct HTTP access? Jump into the REST API docs → [Open API Docs](./api-http/)
 
-See full API reference [here](./api/README.md).
+## SDK
 
-### ⚙️ Setup REST Client Environment
+### Rust
 
-To simplify API testing in VS Code using the [REST Client extension](https://marketplace.visualstudio.com/items?itemName=humao.rest-client), create a workspace settings file:
+Prefer type-safety and Rust-first workflows? Dive into our Rust SDK → [Rust SDK Guide](./sdk/)
 
-> [!NOTE]
-> Ensure the VSCode extension is installed in your VSCode editor.
+#### Primitives
 
-File path:
+Used across the UniFi codebase and designed to help you seamlessly integrate UniFi into your own platform.
 
-```sh
-.vscode/settings.json
-```
-
-#### Sample configuration
-
-```json
-{
-    "rest-client.environmentVariables": {
-        "prod": {
-            "base_url": "https://unifi-api-jlq9.onrender.com",
-            "api_key": "YOUR_API_KEY"
-        }
-    }
-}
-```
-
-Replace `YOUR_API_KEY` with your one. Refer [this](./api/README.md#-get-your-api-key)
-
-#### 🧭 Selecting the Environment
-
-1. Open the Command Palette:
-   - macOS: <kbd>Cmd + Shift + P</kbd>
-   - Windows/Linux: <kbd>Ctrl + Shift + P</kbd>
-2. Type and select **“Rest Client: Switch Environment”**.
-3. Choose the environment — e.g., **prod**.
-
-#### 📦 Using the Variables
-
-After selecting the environment, you can directly reference the variables inside your .http files:
-
-```http
-{{base_url}}
-{{api_key}}
-```
-
-Example:
-
-```http
-GET {{base_url}}/v1/payments
-Authorization: Bearer {{api_key}}
-```
+Follow [here](./primitives/)
