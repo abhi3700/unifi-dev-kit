@@ -14,7 +14,8 @@ async fn main() -> eyre::Result<()> {
 		Some("✅ API is healthy!".to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 
 	let selected_chain = ChainName::Sepolia;
 
@@ -31,7 +32,8 @@ async fn main() -> eyre::Result<()> {
 		Some(format!("{selected_chain}'s Wallet address: ").bold().to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 	println!("{}", format!("{:#?}", address).green().bold());
 
 	Ok(())

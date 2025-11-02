@@ -24,7 +24,8 @@ async fn main() -> eyre::Result<()> {
 		Some("✅ API is healthy!".to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 
 	println!("================================================");
 
@@ -37,12 +38,13 @@ async fn main() -> eyre::Result<()> {
 	println!("========================= Page-1 =========================");
 	let OcPayHistory { receipts, .. } = with_spinner(
 		spinoff::spinners::Dots.into(),
-		"⏳ Requesting faucet 💧...".to_string(),
+		"⏳ Loading Pay History...".to_string(),
 		sdk.get_ocp_receipts(user_id, true, true, None),
-		Some("✅ Faucet requested!".to_string()),
+		Some("✅ Pay History:".to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 
 	let mut count = receipts.len();
 	for receipt in receipts.into_iter() {
