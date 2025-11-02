@@ -5,10 +5,12 @@
 //! - Sufficient balance available on the selected chain
 //!
 //! Inputs used in this example:
-//! - chain        (network to send on)
-//! - coin         (stablecoin type)
-//! - to_address   (recipient address)
-//! - amount       (token amount to send)
+//! - user_id
+//! - payload:
+//!   - chain        (network to send on)
+//!   - coin         (stablecoin type)
+//!   - to_address   (recipient address)
+//!   - amount       (token amount to send)
 
 use colored::Colorize;
 use unifi_examples::{init_sdk, take_input, with_spinner};
