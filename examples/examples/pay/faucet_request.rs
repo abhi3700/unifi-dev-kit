@@ -29,7 +29,7 @@ async fn main() -> eyre::Result<()> {
 
 	println!("================================================");
 
-	if with_spinner(
+	if let Err(e) = with_spinner(
 		spinoff::spinners::Dots.into(),
 		"⏳ Requesting faucet 💧...".to_string(),
 		sdk.request_faucet(user_id, selected_coin, ChainName::Sepolia),
@@ -37,10 +37,8 @@ async fn main() -> eyre::Result<()> {
 		true,
 	)
 	.await
-	.is_err()
 	{
-		// TODO: set the exact time after which the trial should be made.
-		println!("{}", format!("Daily request limit reached: Only one faucet request per coin is allowed daily on Sepolia. \nPlease try again after 24 hrs.").red().bold())
+		println!("{}", e.to_string().red().bold());
 	} else {
 		println!(
 			"{}",
