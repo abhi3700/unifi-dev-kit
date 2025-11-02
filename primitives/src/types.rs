@@ -431,9 +431,6 @@ pub struct OcPayReceipt {
 	pub to_addresses: Vec<String>,
 	pub amounts: Vec<String>,
 	pub memo: Memo,
-	// NOTE: not needed for now. In future, might put it back to see a bundle status or something.
-	// Although we store this field in DB as present in `models::OcPayReceiptDoc`.
-	// pub bundle_ids: Vec<i64>,
 	pub tx_hash: String,
 	pub tx_hashes: Vec<String>,
 	pub status: OcPayReceiptStatus,
