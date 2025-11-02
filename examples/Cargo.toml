@@ -17,6 +17,10 @@ path = "examples/pay/pay_receipt.rs"
 name = "pay_history"
 path = "examples/pay/pay_history.rs"
 
+[[example]]
+name = "faucet_request"
+path = "examples/pay/faucet_request.rs"
+
 # ======= Wallet =======
 
 [[example]]
