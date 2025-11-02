@@ -13,7 +13,8 @@ async fn main() -> eyre::Result<()> {
 		Some("✅ API is healthy!".to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 
 	println!("================================================");
 
@@ -28,7 +29,8 @@ async fn main() -> eyre::Result<()> {
 		Some("✅ Fetching receipt done!".to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 
 	println!("\n{}", "✅ Payment Receipt".green().bold());
 	display_pay_receipt(pay_receipt);

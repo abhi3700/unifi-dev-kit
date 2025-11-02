@@ -19,7 +19,8 @@ async fn main() -> eyre::Result<()> {
 		Some("✅ API is healthy!".to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 
 	println!("================================================");
 
@@ -29,7 +30,7 @@ async fn main() -> eyre::Result<()> {
 
 	println!("================================================");
 
-	if let Err(e) = with_spinner(
+	with_spinner(
 		spinoff::spinners::Dots.into(),
 		"⏳ Requesting faucet 💧...".to_string(),
 		sdk.request_faucet(user_id, selected_coin, ChainName::Sepolia),
@@ -37,16 +38,14 @@ async fn main() -> eyre::Result<()> {
 		true,
 	)
 	.await
-	{
-		println!("{}", e.to_string().red().bold());
-	} else {
-		println!(
-			"{}",
-			format!("🚀 Faucet request sent! 100 {} will be deposited shortly...", selected_coin)
-				.green()
-				.bold()
-		);
-	}
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
+
+	println!(
+		"{}",
+		format!("🚀 Faucet request sent! 100 {} will be deposited shortly...", selected_coin)
+			.green()
+			.bold()
+	);
 
 	Ok(())
 }

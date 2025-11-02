@@ -6,6 +6,14 @@ edition = "2024"
 # ======= Pay =======
 
 [[example]]
+name = "fetch_bal_fee"
+path = "examples/pay/fetch_bal_fee.rs"
+
+[[example]]
+name = "faucet_request"
+path = "examples/pay/faucet_request.rs"
+
+[[example]]
 name = "pay"
 path = "examples/pay/pay.rs"
 
@@ -16,10 +24,6 @@ path = "examples/pay/pay_receipt.rs"
 [[example]]
 name = "pay_history"
 path = "examples/pay/pay_history.rs"
-
-[[example]]
-name = "faucet_request"
-path = "examples/pay/faucet_request.rs"
 
 # ======= Wallet =======
 

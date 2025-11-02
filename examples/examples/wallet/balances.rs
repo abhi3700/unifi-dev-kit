@@ -14,7 +14,8 @@ async fn main() -> eyre::Result<()> {
 		Some("✅ API is healthy!".to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 
 	let selected_chain = ChainName::Sepolia;
 	let selected_coin = StableCoin::USDT;
@@ -35,7 +36,8 @@ async fn main() -> eyre::Result<()> {
 		Some(format!("Get balances on-chain").bold().to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 	println!("{}", format!("{:#?}", balances).green().bold());
 	println!("------------------------------------------------");
 
@@ -46,7 +48,8 @@ async fn main() -> eyre::Result<()> {
 		Some(format!("Get balances of coin").bold().to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 	println!("{}", format!("{:#?}", balances).green().bold());
 
 	Ok(())

@@ -29,7 +29,8 @@ async fn main() -> eyre::Result<()> {
 		Some("✅ API is healthy!".to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 
 	println!("================================================");
 
@@ -55,10 +56,11 @@ async fn main() -> eyre::Result<()> {
 		Some("✅ Balance & fee check done!".to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 
-	println!("{}", format!("💸 Estimated fees: {}", est_fees).green().bold());
 	println!("{}", format!("👛 Net balance: {}", net_balance).green().bold());
+	println!("{}", format!("💸 Estimated fees: {}", est_fees).green().bold());
 	if is_coin_allowance_zero {
 		println!(
 			"{}",
@@ -96,7 +98,9 @@ async fn main() -> eyre::Result<()> {
 		Some("✅ Payment submitted!".to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
+
 	println!("{}", format!("🧾 Receipt ID: {}", receipt_id).green().bold());
 	println!("{}", "🚚 Track this payment using the receipt ID above 👆.".cyan());
 

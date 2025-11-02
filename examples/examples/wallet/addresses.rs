@@ -13,7 +13,8 @@ async fn main() -> eyre::Result<()> {
 		Some("✅ API is healthy!".to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 
 	println!("================================================");
 
@@ -28,7 +29,8 @@ async fn main() -> eyre::Result<()> {
 		Some(format!("Wallet addresses: ").bold().to_string()),
 		true,
 	)
-	.await?;
+	.await
+	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 	println!("{}", format!("{:#?}", addresses).green().bold());
 
 	Ok(())
