@@ -73,7 +73,6 @@ pub fn ask_yes_no(question: &str) -> eyre::Result<bool> {
 
 pub fn display_pay_receipt(receipt: OcPayReceipt) {
 	println!("{}", "----------------------------------------".dimmed());
-	println!("{}", "✅ Payment Receipt".green().bold());
 	println!("{} {}", "Receipt ID:".bright_blue().bold(), receipt.id);
 	println!("{} {}", "Chain:".bright_blue().bold(), receipt.chain.to_string());
 
