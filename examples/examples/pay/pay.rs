@@ -1,4 +1,14 @@
-//! Pay History
+//! Example: Send a gasless stablecoin payment seamlessly using the UniFi SDK.
+//!
+//! Prerequisites:
+//! - You (the payer) must be registered on UniFi
+//! - Sufficient balance available on the selected chain
+//!
+//! Inputs used in this example:
+//! - chain        (network to send on)
+//! - coin         (stablecoin type)
+//! - to_address   (recipient address)
+//! - amount       (token amount to send)
 
 use colored::Colorize;
 use unifi_examples::{init_sdk, take_input, with_spinner};

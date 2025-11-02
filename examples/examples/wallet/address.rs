@@ -1,4 +1,4 @@
-//! View wallet address on a given chain.
+//! Example: View wallet address on a given chain.
 
 use colored::*;
 use unifi_examples::{init_sdk, take_input, with_spinner};

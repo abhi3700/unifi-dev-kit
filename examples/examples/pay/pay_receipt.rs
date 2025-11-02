@@ -1,4 +1,4 @@
-//! Pay Receipt
+//! Example: View Pay Receipt
 
 use colored::Colorize;
 use unifi_examples::{display_pay_receipt, init_sdk, take_input, with_spinner};

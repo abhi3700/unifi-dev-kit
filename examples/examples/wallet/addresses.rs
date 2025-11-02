@@ -1,4 +1,4 @@
-//! View wallet addresses across chain protocols.
+//! Example: View wallet addresses across chain protocols.
 
 use colored::*;
 use unifi_examples::{init_sdk, take_input, with_spinner};

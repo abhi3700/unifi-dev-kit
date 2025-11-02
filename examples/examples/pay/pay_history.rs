@@ -1,4 +1,4 @@
-//! Pay History
+//! Example: View Pay History
 //!
 //! Here, during each run, it loads from page-1 & then it goes to next page & so on so forth.
 //!
