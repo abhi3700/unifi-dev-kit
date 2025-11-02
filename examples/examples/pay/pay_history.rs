@@ -11,7 +11,7 @@
 //!    scrolls-up, then loads next page & likewise it keeps going.
 
 use colored::Colorize;
-use unifi_examples::{init_sdk, take_input, with_spinner};
+use unifi_examples::{display_pay_receipt, init_sdk, take_input, with_spinner};
 use unifi_sdk_primitives::types::{OcPayHistory, PayHistoryFilterParams};
 
 #[tokio::main]
@@ -35,11 +35,21 @@ async fn main() -> eyre::Result<()> {
 	// load payment history (by latest) i.e. page-1 & then automatically Next next... unless there
 	// is no next receipts.
 	println!("========================= Page-1 =========================");
-	let OcPayHistory { receipts, .. } = sdk.get_ocp_receipts(user_id, true, true, None).await?;
-	println!("{}", format!("{:#?}", receipts).green().bold());
+	let OcPayHistory { receipts, .. } = with_spinner(
+		spinoff::spinners::Dots.into(),
+		"⏳ Requesting faucet 💧...".to_string(),
+		sdk.get_ocp_receipts(user_id, true, true, None),
+		Some("✅ Faucet requested!".to_string()),
+		true,
+	)
+	.await?;
 
 	let mut count = receipts.len();
-	while let Ok(next_page) = sdk
+	for receipt in receipts.into_iter() {
+		display_pay_receipt(receipt);
+	}
+
+	while let Ok(OcPayHistory { receipts, has_next, .. }) = sdk
 		.get_ocp_receipts(
 			user_id,
 			true,
@@ -48,13 +58,15 @@ async fn main() -> eyre::Result<()> {
 		)
 		.await
 	{
-		println!("========================= NEXT ... =========================");
-		// NOTE: on purpose, didn't use receipts field as in the display I want to see each page's
-		// Prev & Next values.
-		println!("{}", format!("{:#?}", next_page).green().bold());
-		count += next_page.receipts.len();
+		count += receipts.len();
+		if receipts.len() > 0 {
+			println!("========================= NEXT ... =========================");
+		}
+		for receipt in receipts.into_iter() {
+			display_pay_receipt(receipt);
+		}
 
-		if !next_page.has_next {
+		if !has_next {
 			break;
 		}
 	}
