@@ -1,4 +1,4 @@
-//! View wallet balances on chain.
+//! Example: View wallet balances on chain.
 
 use colored::*;
 use unifi_examples::{init_sdk, take_input, with_spinner};
