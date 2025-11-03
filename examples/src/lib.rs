@@ -1,7 +1,10 @@
 use colored::*;
 use spinoff::spinners::SpinnerFrames;
 use std::{io::Write, sync::LazyLock};
-use unifi_sdk_primitives::types::OcPayReceipt;
+use unifi_sdk_primitives::types::{
+	ChainName, OcPayReceipt, StableCoin, WalletBalancesByChain, WalletBalancesByChainCoinDetails,
+	WalletBalancesByCoin, WalletBalancesByCoinChainDetails,
+};
 use unifi_sdk_rs::Sdk;
 
 pub static API_BASE_URL: LazyLock<&str> = LazyLock::new(|| {
@@ -127,4 +130,83 @@ pub fn display_pay_receipt(receipt: OcPayReceipt) {
 	}
 
 	println!("{}", "----------------------------------------".dimmed());
+}
+
+pub fn print_balances_by_chain(chain: ChainName, data: &WalletBalancesByChain) {
+	println!("\n{}", "================ Wallet — by Chain ================".bold().purple());
+	println!("{} {}\n", "Chain:".bold(), format!("{chain:?}").cyan());
+
+	println!("{} {}", "Total balance:".bold(), format!("${}", data.total_usd).green().bold());
+	println!("{}", "----------------------------------------------".dimmed());
+
+	for (coin, WalletBalancesByChainCoinDetails { price_usd, balance, value_usd }) in
+		&data.coin_details
+	{
+		print_wallet_card_coin(*coin, &price_usd, &balance, &value_usd);
+	}
+}
+
+pub fn print_balances_by_coin(coin: StableCoin, data: &WalletBalancesByCoin) {
+	println!("\n{}", "================ Wallet — by Asset ================".bold().purple());
+	println!("{} {}\n", "Asset:".bold(), format!("{coin:?}").cyan());
+
+	println!("{} {}", "Total balance:".bold(), format!("${}", data.total_usd).green().bold());
+	println!("{}", "----------------------------------------------".dimmed());
+
+	for (chain, WalletBalancesByCoinChainDetails { balance, value_usd }) in &data.chain_details {
+		print_wallet_card_chain(*chain, balance, &value_usd);
+	}
+}
+
+fn print_wallet_card_coin(coin: StableCoin, price: &str, balance: &str, value: &str) {
+	let icon = match coin {
+		StableCoin::USDT => "🟢",
+		StableCoin::USDC => "🔵",
+		StableCoin::DAI => "🟡",
+	};
+
+	println!("{}", "┌────────────────────────────────────┐".bright_black());
+	println!(
+		"  {icon} {}   {}",
+		format!("{coin:?}").bold(),
+		format!("${value}").bold().truecolor(0, 200, 130) // UniFi green
+	);
+	println!("  {} {}", "Price:  ".bright_black(), format!("${price}"));
+	println!("  {} {}", "Balance:".bright_black(), balance);
+	println!();
+	println!(
+		"  {}      {}",
+		"↗ Pay".on_truecolor(232, 50, 140).white().bold(), // UniFi magenta
+		"⬇ Deposit".on_truecolor(87, 199, 182).black().bold(),
+	);
+	println!("{}", "└────────────────────────────────────┘".bright_black());
+	println!();
+}
+
+fn print_wallet_card_chain(chain: ChainName, balance: &str, value: &str) {
+	let icon = match chain {
+		ChainName::Ethereum => "⬡",
+		ChainName::Polygon => "🟣",
+		ChainName::Sepolia => "⬡",
+		ChainName::Anvil => "🛠",
+		// _ => "⚙️",
+	};
+
+	println!("{}", "┌────────────────────────────────────┐".bright_black());
+	println!(
+		"  {icon} {}   {}",
+		format!("{chain:?}").bold(),
+		format!("${value}").bold().truecolor(0, 200, 130)
+	);
+	println!("  {} {}", "Balance:   ".bright_black(), balance);
+	println!();
+
+	println!(
+		"  {}      {}",
+		"↗ Pay".on_truecolor(232, 50, 140).white().bold(), // UniFi magenta
+		"⬇ Deposit".on_truecolor(87, 199, 182).black().bold(),
+	);
+
+	println!("{}", "└────────────────────────────────────┘".bright_black());
+	println!();
 }
