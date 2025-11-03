@@ -1,7 +1,9 @@
 //! Example: View wallet balances on chain.
 
 use colored::*;
-use unifi_examples::{init_sdk, take_input, with_spinner};
+use unifi_examples::{
+	init_sdk, print_balances_by_chain, print_balances_by_coin, take_input, with_spinner,
+};
 use unifi_sdk_primitives::types::{ChainName, StableCoin};
 
 #[tokio::main]
@@ -31,26 +33,27 @@ async fn main() -> eyre::Result<()> {
 
 	let balances = with_spinner(
 		spinoff::spinners::Dots.into(),
-		format!("Get balances on-chain").yellow().to_string(),
+		format!("Get balances on {selected_chain}:").yellow().to_string(),
 		sdk.get_wallet_balances_by_chain(user_id, selected_chain),
-		Some(format!("Get balances on-chain").bold().to_string()),
+		Some(format!("Get balances on {selected_chain}:").bold().to_string()),
 		true,
 	)
 	.await
 	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
-	println!("{}", format!("{:#?}", balances).green().bold());
+
+	print_balances_by_chain(selected_chain, &balances);
 	println!("------------------------------------------------");
 
 	let balances = with_spinner(
 		spinoff::spinners::Dots.into(),
-		format!("Get balances of coin").yellow().to_string(),
+		format!("Get balances of {selected_coin}:").yellow().to_string(),
 		sdk.get_wallet_balances_by_coin(user_id, selected_coin),
-		Some(format!("Get balances of coin").bold().to_string()),
+		Some(format!("Get balances of {selected_coin}:").bold().to_string()),
 		true,
 	)
 	.await
 	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
-	println!("{}", format!("{:#?}", balances).green().bold());
+	print_balances_by_coin(selected_coin, &balances);
 
 	Ok(())
 }
