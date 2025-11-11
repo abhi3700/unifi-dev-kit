@@ -8,7 +8,7 @@
 
 ## API
 
-Need direct HTTP access? Jump into the REST API docs → [Open API Docs](./api-http/)
+Need direct HTTP access? Jump into the REST API docs → [Open API Docs](./api-http/README.md)
 
 ## SDK
 
