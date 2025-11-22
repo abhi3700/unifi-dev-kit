@@ -1,5 +1,15 @@
 # API
 
+## Background
+
+🏢 **Businesses** & **Startups** integrate via **API-aaS**, getting instant access to UniFi’s low-cost, high-speed payment rails.
+
+<p align="left">
+  <img src="../res/developer_interaction_w_unifi_infra.png" alt="Create new API key button" width="50%" height="auto">
+</p>
+
+Watch this [video](https://www.youtube.com/watch?v=KwZcMedBves) & launch post on [LinkedIn](https://www.linkedin.com/feed/update/urn:li:activity:7391379223107596289/?actorCompanyId=105053542) to see how quick the API integration is, for seamless stablecoin payments.
+
 ## 🔑 Get Your API Key
 
 To start using the UniFi API, you’ll need to create an API key.
