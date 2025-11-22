@@ -464,7 +464,7 @@ impl From<OcPayReceiptStatus> for Bson {
 	}
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone, Copy, PartialEq)]
 pub enum Memo {
 	#[default]
 	General,
