@@ -5,8 +5,8 @@ use unifi_sdk_primitives::types::{
 };
 
 impl Sdk {
-	/// Fetch user's pre-transaction net onchain balance for a coin on a chain.
-	pub async fn fetch_pre_ocp_net_onchain_balance(
+	/// Fetch user's pre-ocp net balance for a coin on a chain.
+	pub async fn fetch_pre_ocp_net_balance(
 		&self,
 		user_id: &str,
 		payload: PreOcpPayload,
