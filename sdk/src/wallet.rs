@@ -35,12 +35,14 @@ impl Sdk {
 		user_id: &str,
 		chain: ChainName,
 		coin: StableCoin,
+		is_custodial: bool,
 	) -> eyre::Result<String> {
 		let handler = ApiHandler::GetOcChainCoinBalance;
 		let path = handler.fill_path_ordered(&[
 			user_id.to_owned(),
 			chain.to_string(),
 			coin.to_string(),
+			is_custodial.to_string(),
 		])?;
 		let url = format!("{}{}", self.api_base_url, path);
 		let resp = self.with_auth(self.client.get(url)).send().await;
