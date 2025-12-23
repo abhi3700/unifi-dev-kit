@@ -70,12 +70,14 @@ impl Sdk {
 		user_id: &str,
 		coin: StableCoin,
 		chain: ChainName,
+		is_custodial: bool,
 	) -> eyre::Result<()> {
 		let handler = ApiHandler::RequestFaucet;
 		let path = handler.fill_path_ordered(&[
 			user_id.to_owned(),
 			coin.to_string(),
 			chain.to_string(),
+			is_custodial.to_string(),
 		])?;
 		let url = format!("{}{}", self.api_base_url, path);
 		let resp = self.with_auth(self.client.post(url)).send().await;
