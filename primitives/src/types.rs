@@ -1,3 +1,4 @@
+use alloy_primitives::U256;
 use bson::{
 	Bson::{self, Document as BsonDocument},
 	doc,
@@ -603,6 +604,14 @@ pub struct PreOcpPayload {
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValues {
 	pub is_coin_allowance_zero: bool,
+	pub balance: String,
+	pub est_fees: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+pub struct PreOcpValuesNcw {
+	/// Allowance to `Permit2`
+	pub allowance: U256,
 	pub balance: String,
 	pub est_fees: String,
 }

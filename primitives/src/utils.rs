@@ -28,14 +28,14 @@ pub fn is_value_gte(num_in_u256_str: &str, amount: &str, coin_decimals: u8) -> e
 /// - User entering amount as String compared to fetched net Onchain balance (U256) as validation.
 ///
 /// NOTE: All tests inside Base layer.
-pub fn parse_human_fmt_to_u256(num: &str, coin_decimals: u8) -> eyre::Result<U256> {
+pub fn parse_human_fmt_to_u256(value: &str, coin_decimals: u8) -> eyre::Result<U256> {
 	// NOTE: this line added due to a small case where in `pending_amount` field in DB is set to
 	// "0E-18" instead of "0.00000000...000" for DAI. It was found that this was done inside
 	// `execute_bundle` fn during u128 arithmetic at mongoDB level that can't be controlled from
 	// code here. So, covered the case. Else, there would be invalid digit error in case of DAI or
 	// any token with such big decimals (7-18). Didn't notice this issue in case of 6 decimals
 	// tokens like USDT, USDC.
-	let num = if num.starts_with("0E-") { "0.0" } else { num };
+	let num = if value.starts_with("0E-") { "0.0" } else { value };
 
 	// Split the input into whole and fractional parts
 	let parts: Vec<&str> = num.split('.').collect();
