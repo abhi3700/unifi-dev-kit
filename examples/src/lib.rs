@@ -77,19 +77,19 @@ pub fn ask_yes_no(question: &str) -> eyre::Result<bool> {
 pub fn display_pay_receipt(receipt: OcPayReceipt) {
 	println!("{}", "----------------------------------------".dimmed());
 	println!("{} {}", "Receipt ID:".bright_blue().bold(), receipt.id);
-	println!("{} {}", "Chain:".bright_blue().bold(), receipt.chain.to_string());
+	println!("{} {}", "Chain:".bright_blue().bold(), receipt.chain);
 
 	// Show coins with amounts and addresses
 	for (idx, coin) in receipt.coins.iter().enumerate() {
 		let amt = receipt.amounts.get(idx).map(|s| s.as_str()).unwrap_or("");
 
 		let addr = receipt.to_addresses.get(idx).map(|s| s.as_str()).unwrap_or("");
-		println!("{} {} -> {} {}", "Coin:".cyan(), coin.to_string(), "Amount:".cyan(), amt);
+		println!("{} {} -> {} {}", "Coin:".cyan(), coin, "Amount:".cyan(), amt);
 		println!("{} {}", "To:".cyan(), addr);
 	}
 
 	// Show memo only if not default or if meaningful
-	let memo_str: String = receipt.memo.clone().into();
+	let memo_str: String = receipt.memo.into();
 	if !memo_str.is_empty() {
 		println!("{} {}", "Memo:".bright_yellow(), memo_str);
 	}
@@ -120,7 +120,7 @@ pub fn display_pay_receipt(receipt: OcPayReceipt) {
 	// Time info
 	if receipt.start_ts_us > 0 && receipt.end_ts_us > 0 {
 		let dur_s = (receipt.end_ts_us - receipt.start_ts_us) as f64 / 1_000_000.0;
-		println!("{} {:.2} {}", "Duration:".bright_blue().bold(), dur_s, "sec");
+		println!("{} {:.2} sec", "Duration:".bright_blue().bold(), dur_s);
 	} else if receipt.start_ts_us > 0 {
 		// Convert microseconds to seconds and then to human readable datetime
 		let submitted =
@@ -142,7 +142,7 @@ pub fn print_balances_by_chain(chain: ChainName, data: &WalletBalancesByChain) {
 	for (coin, WalletBalancesByChainCoinDetails { price_usd, balance, value_usd }) in
 		&data.coin_details
 	{
-		print_wallet_card_coin(*coin, &price_usd, &balance, &value_usd);
+		print_wallet_card_coin(*coin, price_usd, balance, value_usd);
 	}
 }
 
@@ -154,7 +154,7 @@ pub fn print_balances_by_coin(coin: StableCoin, data: &WalletBalancesByCoin) {
 	println!("{}", "----------------------------------------------".dimmed());
 
 	for (chain, WalletBalancesByCoinChainDetails { balance, value_usd }) in &data.chain_details {
-		print_wallet_card_chain(*chain, balance, &value_usd);
+		print_wallet_card_chain(*chain, balance, value_usd);
 	}
 }
 
