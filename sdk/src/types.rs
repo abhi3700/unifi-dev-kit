@@ -74,7 +74,7 @@ impl ApiHandler {
 			AH::FetchPreOcpTotalEstFees => "/payment/onchain/est_fee/{user_id}/{chain}/{coin}",
 			AH::FetchPreOcpBalanceAndEstFees =>
 				"/payment/onchain/balance_est_fees/{user_id}/{chain}/{coin}",
-			AH::RequestFaucet => "/faucet/{user_id}/{coin}/{chain}",
+			AH::RequestFaucet => "/faucet/{user_id}/{coin}/{chain}/{is_custodial}",
 			AH::PayOnchain => "/payment/onchain/{user_id}/{is_fee_incl}",
 			AH::FliqNotifyPayer =>
 				"/payment/onchain/fliq/notify/payer/{pid}/{chain}/{coin}/{to_address}/{amount}",

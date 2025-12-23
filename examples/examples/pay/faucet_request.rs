@@ -33,7 +33,7 @@ async fn main() -> eyre::Result<()> {
 	with_spinner(
 		spinoff::spinners::Dots.into(),
 		"⏳ Requesting faucet 💧...".to_string(),
-		sdk.request_faucet(user_id, selected_coin, ChainName::Sepolia),
+		sdk.request_faucet(user_id, selected_coin, ChainName::Sepolia, true),
 		Some("✅ Faucet requested!".to_string()),
 		true,
 	)
