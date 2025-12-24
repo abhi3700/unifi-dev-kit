@@ -29,7 +29,7 @@ impl Sdk {
 		Sdk::process_response::<HashMap<ChainProtocol, String>>(resp).await
 	}
 
-	/// Get a chain's coin balance for a given user
+	/// Get a chain's coin **net** balance for a given user
 	pub async fn get_oc_chain_coin_balance(
 		&self,
 		user_id: &str,
