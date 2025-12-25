@@ -64,8 +64,10 @@ impl ApiHandler {
 			// Onchain
 			AH::GetOcChainCoinBalance =>
 				"/wallet/onchain/balance/{user_id}/{chain}/{coin}/{is_custodial}",
-			AH::GetOcChainAllCoinsBalances => "/wallet/onchain/balances/{user_id}/{chain}",
-			AH::GetWalletBalancesByChain => "/wallet/balances/by_chain/{user_id}/{chain}",
+			AH::GetOcChainAllCoinsBalances =>
+				"/wallet/onchain/balances/{user_id}/{chain}/{is_custodial}",
+			AH::GetWalletBalancesByChain =>
+				"/wallet/balances/by_chain/{user_id}/{chain}/{is_custodial}",
 			AH::GetWalletBalancesByCoin => "/wallet/balances/by_coin/{user_id}/{coin}",
 
 			/* Payment Onchain */
