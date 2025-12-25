@@ -55,9 +55,14 @@ impl Sdk {
 		&self,
 		user_id: &str,
 		chain: ChainName,
+		is_custodial: bool,
 	) -> eyre::Result<HashMap<StableCoin, String>> {
 		let handler = ApiHandler::GetOcChainAllCoinsBalances;
-		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
+		let path = handler.fill_path_ordered(&[
+			user_id.to_owned(),
+			chain.to_string(),
+			is_custodial.to_string(),
+		])?;
 		let url = format!("{}{}", self.api_base_url, path);
 		let resp = self.with_auth(self.client.get(url)).send().await;
 
@@ -72,9 +77,14 @@ impl Sdk {
 		&self,
 		user_id: &str,
 		chain: ChainName,
+		is_custodial: bool,
 	) -> eyre::Result<WalletBalancesByChain> {
 		let handler = ApiHandler::GetWalletBalancesByChain;
-		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
+		let path = handler.fill_path_ordered(&[
+			user_id.to_owned(),
+			chain.to_string(),
+			is_custodial.to_string(),
+		])?;
 		let url = format!("{}{}", self.api_base_url, path);
 		let resp = self.with_auth(self.client.get(url)).send().await;
 
