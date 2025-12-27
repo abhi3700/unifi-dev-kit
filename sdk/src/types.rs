@@ -68,7 +68,8 @@ impl ApiHandler {
 				"/wallet/onchain/balances/{user_id}/{chain}/{is_custodial}",
 			AH::GetWalletBalancesByChain =>
 				"/wallet/balances/by_chain/{user_id}/{chain}/{is_custodial}",
-			AH::GetWalletBalancesByCoin => "/wallet/balances/by_coin/{user_id}/{coin}",
+			AH::GetWalletBalancesByCoin =>
+				"/wallet/balances/by_coin/{user_id}/{coin}/{is_custodial}",
 
 			/* Payment Onchain */
 			AH::FetchPreOcpNetOnchainBalance =>

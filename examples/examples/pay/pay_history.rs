@@ -61,7 +61,7 @@ async fn main() -> eyre::Result<()> {
 		.await
 	{
 		count += receipts.len();
-		if receipts.len() > 0 {
+		if !receipts.is_empty() {
 			println!("========================= NEXT ... =========================");
 		}
 		for receipt in receipts.into_iter() {
