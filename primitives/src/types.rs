@@ -238,14 +238,28 @@ impl StableCoin {
 
 /// All coins (network/gas + stablecoins) supported by OmniPay
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Coin {
 	ETH,
-	MATIC,
+	POL,
 	// NOTE: For Sepolia testnet, use `Eth'
 	USDT,
 	USDC,
 	DAI,
+}
+
+impl Coin {
+	pub fn decimals(&self) -> u8 {
+		use Coin as C;
+
+		match self {
+			C::ETH => 18,
+			C::POL => 18,
+			C::USDT => StableCoin::USDT.decimals(),
+			C::USDC => StableCoin::USDC.decimals(),
+			C::DAI => StableCoin::DAI.decimals(),
+		}
+	}
 }
 
 impl From<StableCoin> for Coin {
