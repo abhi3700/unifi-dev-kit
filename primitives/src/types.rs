@@ -1,4 +1,3 @@
-use alloy_primitives::U256;
 use bson::{
 	Bson::{self, Document as BsonDocument},
 	doc,
@@ -126,6 +125,45 @@ impl AsRef<str> for ChainName {
 			Polygon => "Polygon",
 			Sepolia => "Sepolia",
 			Anvil => "Anvil",
+		}
+	}
+}
+
+pub struct GasEstimate {
+	pub eth_transfer: u128,
+	pub approve: u128,
+	pub transfer_from: u128,
+	pub permit_transfer_from: u128,
+}
+
+impl ChainName {
+	/// Get the gas limit (max. feasible for prediction so that the actual gas consumed is lower
+	/// than the predicted) of all the used functions (in onchain payment) for a given
+	/// coin. Although all the ERC20 tokens have same gas usage irrespective of chains. But, just
+	/// in case.
+	pub fn get_gas_usage_limit(&self, coin: StableCoin) -> GasEstimate {
+		// NOTE: currently, every token is ERC20 with same code. So, the gas estimate kept same.
+		let est_gas = GasEstimate {
+			eth_transfer: 21_000,
+			approve: 100_000,
+			transfer_from: 80_000,
+			permit_transfer_from: 120_000,
+		};
+		match (coin, self) {
+			// TODO: Reduce the gas limit for `approve` and `transfer_from` later on depending on
+			// the bulk users' data.
+			(StableCoin::USDT, ChainName::Ethereum) => est_gas,
+			(StableCoin::USDC, ChainName::Ethereum) => est_gas,
+			(StableCoin::DAI, ChainName::Ethereum) => est_gas,
+			(StableCoin::USDT, ChainName::Polygon) => est_gas,
+			(StableCoin::USDC, ChainName::Polygon) => est_gas,
+			(StableCoin::DAI, ChainName::Polygon) => est_gas,
+			(StableCoin::USDT, ChainName::Sepolia) => est_gas,
+			(StableCoin::USDC, ChainName::Sepolia) => est_gas,
+			(StableCoin::DAI, ChainName::Sepolia) => est_gas,
+			(StableCoin::USDT, ChainName::Anvil) => est_gas,
+			(StableCoin::USDC, ChainName::Anvil) => est_gas,
+			(StableCoin::DAI, ChainName::Anvil) => est_gas,
 		}
 	}
 }
@@ -258,6 +296,16 @@ impl Coin {
 			C::USDT => StableCoin::USDT.decimals(),
 			C::USDC => StableCoin::USDC.decimals(),
 			C::DAI => StableCoin::DAI.decimals(),
+		}
+	}
+
+	pub fn chain_to_gas_coin(chain: ChainName) -> Coin {
+		use ChainName as C;
+		match chain {
+			C::Ethereum => Coin::ETH,
+			C::Polygon => Coin::POL,
+			C::Sepolia => Coin::ETH,
+			C::Anvil => Coin::ETH,
 		}
 	}
 }
@@ -624,10 +672,27 @@ pub struct PreOcpValues {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValuesNcw {
-	/// Allowance to `Permit2`
-	pub allowance: U256,
+	/// Allowance to `Permit2` need to use for comparo. So, "U256" in String.
+	/// ### Usage
+	/// - compare with amount for est. gas_usage
+	pub allowance: String,
+	/// Balance is formatted.
+	/// ### Usage
+	/// - display in UI
+	/// - compare with amount for err.
 	pub balance: String,
-	pub est_fees: String,
+	/// Gas price in wei.
+	/// ### Usage
+	/// - required in compute est. fee (in stablecoin).
+	pub gas_price: u128,
+	/// E.g. ETH, POL, ..
+	/// ### Usage
+	/// - required in compute est. fee (in stablecoin).
+	pub gas_token_price: f64,
+	/// E.g. USDT, USDC, ..
+	/// ### Usage
+	/// - required in compute est. fee (in stablecoin).
+	pub coin_price: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, /* Props, */ PartialEq, Default)]
