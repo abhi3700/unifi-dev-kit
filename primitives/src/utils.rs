@@ -1,4 +1,7 @@
-use crate::{errors::UfiError, types::StableCoin};
+use crate::{
+	errors::UfiError,
+	types::{ChainName, Coin, GasEstimate, PreOcpValuesNcw, StableCoin},
+};
 use alloy_primitives::{
 	U256,
 	utils::{format_units, parse_units},
@@ -57,6 +60,72 @@ pub fn parse_human_fmt_to_u256(value: &str, coin_decimals: u8) -> eyre::Result<U
 	// Scale the whole part and combine with fractional part
 	let scaled_whole_part = whole_part * U256::from(10u128.pow(coin_decimals as u32));
 	Ok(scaled_whole_part + fractional_part)
+}
+
+/// Convert from f64 to U256 without rounding off.
+/// Normally, "3.819636527426028" returns "4" using `U256::from(..)`. To prevent this
+/// rounding-off, we need to truncate to only valid decimals like 6 for USDT, 18 for DAI, etc.
+/// TODO: Test
+pub fn f64_to_u256_dec(input: f64, decimals: u8) -> U256 {
+	// Convert decimals to a power of 10
+	let multiplier = 10u64.pow(decimals as u32) as f64;
+
+	// Multiply the input by the multiplier to shift the decimal point
+	let scaled_input = input * multiplier;
+
+	// Convert the scaled float to an integer type safely
+	let integer_part = scaled_input.trunc() as u128;
+
+	// Convert the integer to U256
+	U256::from(integer_part)
+}
+
+/// tot_amount = amount + est_fees.
+///
+/// NOTE: This fn can't be `async` bcoz on change of amount on UI, the text box err (if any) should
+/// show synchronously.
+///
+/// ## Returns
+/// - formatted est fees. E.g. `0.132433` USDT or "0.00" USDT.
+///
+/// TODO: Test
+pub fn compute_est_fees_ncw(
+	coin: StableCoin,
+	chain: ChainName,
+	tot_amount: &str,
+	pre_ocp_values: PreOcpValuesNcw,
+) -> eyre::Result<String> {
+	let PreOcpValuesNcw { allowance, balance, gas_price, gas_token_price, coin_price } =
+		pre_ocp_values;
+	let coin_decimals = coin.decimals();
+	let amount = parse_human_fmt_to_u256(tot_amount, coin_decimals)?;
+	let balance = parse_human_fmt_to_u256(&balance, coin_decimals)?;
+
+	if amount.gt(&balance) {
+		return Err(UfiError::InsufficientBalance.into())
+	}
+
+	let GasEstimate { approve, permit_transfer_from, .. } = chain.get_gas_usage_limit(coin);
+
+	let allowance = U256::from_str(&allowance)?;
+	let est_gas_usage = if allowance.is_zero() || allowance.lt(&amount) {
+		approve + permit_transfer_from
+	} else {
+		permit_transfer_from
+	};
+
+	// fee = gas * gas_price
+	let est_gas_fee = (est_gas_usage * gas_price) as f64;
+	let est_fee_f64 = est_gas_fee * gas_token_price /
+		(coin_price * 10_i32.pow(Coin::chain_to_gas_coin(chain).decimals() as u32) as f64);
+	let est_fee_u256 = f64_to_u256_dec(est_fee_f64, coin_decimals);
+	let est_fee_formatted = if est_fee_u256.ne(&U256::ZERO) {
+		format_units(est_fee_u256, coin_decimals)?
+	} else {
+		"0.00".to_string()
+	};
+
+	Ok(est_fee_formatted)
 }
 
 /// Validates the amount string and converts it to `U256`.
