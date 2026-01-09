@@ -1,12 +1,12 @@
 use crate::{
 	errors::UfiError,
-	types::{ChainName, Coin, GasEstimate, PreOcpValuesNcw, StableCoin},
+	types::{Coin, GasEstimate, PreOcpPayload, PreOcpValuesNcwParams, StableCoin},
 };
 use alloy_primitives::{
 	U256,
 	utils::{format_units, parse_units},
 };
-use eyre::{OptionExt, ensure};
+use eyre::{Context, OptionExt, ensure};
 use std::str::FromStr;
 
 /// Format any num (in U256 String) to Decimal formatted considering coin's decimals.
@@ -65,8 +65,13 @@ pub fn parse_human_fmt_to_u256(value: &str, coin_decimals: u8) -> eyre::Result<U
 /// Convert from f64 to U256 without rounding off.
 /// Normally, "3.819636527426028" returns "4" using `U256::from(..)`. To prevent this
 /// rounding-off, we need to truncate to only valid decimals like 6 for USDT, 18 for DAI, etc.
-/// TODO: Test
+///
+/// WARN: There is a round-off in case of 16+ decimals as IEEE limit is set to 15 decimals.
 pub fn f64_to_u256_dec(input: f64, decimals: u8) -> U256 {
+	if !input.is_finite() || input <= 0.0 {
+		return U256::ZERO;
+	}
+
 	// Convert decimals to a power of 10
 	let multiplier = 10u64.pow(decimals as u32) as f64;
 
@@ -80,52 +85,110 @@ pub fn f64_to_u256_dec(input: f64, decimals: u8) -> U256 {
 	U256::from(integer_part)
 }
 
-/// tot_amount = amount + est_fees.
+/// Compute Est. fees for NC Pay.
 ///
-/// NOTE: This fn can't be `async` bcoz on change of amount on UI, the text box err (if any) should
-/// show synchronously.
+///
+/// ## Notes
+/// - This fn can't be `async` bcoz on change of amount on UI, the text box err (if any) should show
+///   synchronously.
+/// - If the fee is:
+///   - excl: We just have the entered amount. So, there is a `est fees` computed after considering
+///     only amount & then `amount + est_fees` is checked against allowance, etc.
+///   - incl: We have to do the maths once & then
+///
+/// ## Arguments
+/// - `payload`: selected {coin, chain}
+/// - `tot_amount`: sum of [amount1, amount2, .., admin_fee]. If the value is "112.432432" USDT,
+///   then parse as u256 str i.e. "112432432".
+/// - `pre_ocp_values`: params (from fn: `prefetch_ncw_balance_fee_params`) for calculating est fees
+///   synchronously.
+/// - `is_fee_incl`
 ///
 /// ## Returns
+/// - `is_coin_allowance_suff`: NOTE: due to this field returned, we don't have to convert the
+///   formatted required allowance to U256 for zero check.
+///   - true: coin allowance is sufficient. Hence, all ok from amount box side.
+///   - false: coin allowance is insufficient. So, an err is shown saying "Please approve X amount"
+/// - required_allowance: X value is to be approved by payer to Permit2. E.g. `21.34545` USDT or
+///   "0.00" USDT.
 /// - formatted est fees. E.g. `0.132433` USDT or "0.00" USDT.
-///
-/// TODO: Test
 pub fn compute_est_fees_ncw(
-	coin: StableCoin,
-	chain: ChainName,
-	tot_amount: &str,
-	pre_ocp_values: PreOcpValuesNcw,
-) -> eyre::Result<String> {
-	let PreOcpValuesNcw { allowance, balance, gas_price, gas_token_price, coin_price } =
-		pre_ocp_values;
-	let coin_decimals = coin.decimals();
-	let amount = parse_human_fmt_to_u256(tot_amount, coin_decimals)?;
-	let balance = parse_human_fmt_to_u256(&balance, coin_decimals)?;
+	payload: PreOcpPayload,
+	tot_amount_u256: &str,
+	pre_ocp_values: &PreOcpValuesNcwParams,
+	is_fee_incl: bool,
+) -> eyre::Result<(bool, String, String)> {
+	// 1. Destructure and Parse Inputs immediately
+	let PreOcpPayload { coin, chain } = payload;
+	let PreOcpValuesNcwParams {
+		allowance: allowance_str,
+		balance: balance_str,
+		gas_price,
+		gas_token_price,
+		coin_price,
+	} = pre_ocp_values;
 
-	if amount.gt(&balance) {
+	let coin_decimals = coin.decimals();
+	let allowance = U256::from_str(allowance_str).wrap_err("Failed to parse allowance")?;
+	let mut tot_amount = U256::from_str(tot_amount_u256).wrap_err("Failed to parse amount")?;
+	let balance = parse_human_fmt_to_u256(balance_str, coin_decimals)?;
+
+	// 2. Early Balance Check (Fail fast)
+	if tot_amount.gt(&balance) {
 		return Err(UfiError::InsufficientBalance.into())
 	}
 
+	// 3. Pre-calculate Constants
 	let GasEstimate { approve, permit_transfer_from, .. } = chain.get_gas_usage_limit(coin);
 
-	let allowance = U256::from_str(&allowance)?;
-	let est_gas_usage = if allowance.is_zero() || allowance.lt(&amount) {
-		approve + permit_transfer_from
-	} else {
-		permit_transfer_from
+	// Optimization: Calculate price denominator once.
+	// Formula: coin_price * 10^(gas_coin_decimals)
+	let gas_coin_decimals = Coin::chain_to_gas_coin(chain).decimals() as i32;
+	let price_denom = coin_price * 10f64.powi(gas_coin_decimals);
+
+	// 4. Define Calculation Logic (Closure to handle repetition)
+	// Returns: (Calculated Fee U256, Is Allowance Sufficient)
+	let calc_snapshot = |target_amt: U256| -> (U256, U256) {
+		// NOTE: For C Pay, allowance is either 0 or MAX unlike in NC Pay.
+		let is_suff = !allowance.is_zero() && allowance.ge(&target_amt);
+
+		let (est_gas_usage, required_allowance_val) = if is_suff {
+			(permit_transfer_from, U256::ZERO)
+		} else {
+			(approve + permit_transfer_from, target_amt - allowance)
+		};
+
+		// fee = (gas_usage * gas_price * gas_token_price) / (coin_price * 10^decimals)
+		let est_gas_fee = (est_gas_usage * gas_price) as f64;
+		let est_fee_f64 = est_gas_fee * gas_token_price / price_denom;
+
+		(f64_to_u256_dec(est_fee_f64, coin_decimals), required_allowance_val)
 	};
 
-	// fee = gas * gas_price
-	let est_gas_fee = (est_gas_usage * gas_price) as f64;
-	let est_fee_f64 = est_gas_fee * gas_token_price /
-		(coin_price * 10_i32.pow(Coin::chain_to_gas_coin(chain).decimals() as u32) as f64);
-	let est_fee_u256 = f64_to_u256_dec(est_fee_f64, coin_decimals);
-	let est_fee_formatted = if est_fee_u256.ne(&U256::ZERO) {
-		format_units(est_fee_u256, coin_decimals)?
-	} else {
-		"0.00".to_string()
-	};
+	// 5. Initial Calculation
+	let (mut est_fee_u256, mut required_allowance_val) = calc_snapshot(tot_amount);
 
-	Ok(est_fee_formatted)
+	// 6. Conditional Re-calculation (If fee is excluded, total amount increases)
+	if !is_fee_incl {
+		tot_amount += est_fee_u256;
+		if tot_amount.gt(&balance) {
+			return Err(UfiError::InsufficientBalance.into())
+		}
+
+		// Check if adding the fee pushed us over the allowance threshold
+		(est_fee_u256, required_allowance_val) = calc_snapshot(tot_amount);
+	}
+
+	// 7. Format Output
+	let is_suff = required_allowance_val.is_zero();
+	let required_allowance_val_fmt = fmt_output(required_allowance_val, coin_decimals)?;
+	let est_fee_fmt = fmt_output(est_fee_u256, coin_decimals)?;
+
+	Ok((is_suff, required_allowance_val_fmt, est_fee_fmt))
+}
+
+pub fn fmt_output(value: U256, coin_decimals: u8) -> eyre::Result<String> {
+	if value.is_zero() { Ok("0.00".to_string()) } else { Ok(format_units(value, coin_decimals)?) }
 }
 
 /// Validates the amount string and converts it to `U256`.
@@ -192,4 +255,25 @@ pub fn validate_and_parse_amount_wo_sanitize(
 	ensure!(total_amount_u256.le(&balance_u256), UfiError::InsufficientBalance);
 
 	Ok(())
+}
+
+/// ```
+/// cargo test --package unifi-sdk-primitives --lib --release -F utils -- utils::tests --nocapture
+/// ```
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_f64_to_u256_dec() -> eyre::Result<()> {
+		assert_eq!(f64_to_u256_dec(0.0, 6), U256::from_str("0")?);
+		assert_eq!(f64_to_u256_dec(1.243243, 6), U256::from_str("1243243")?);
+		assert_eq!(f64_to_u256_dec(1.243243343254, 6), U256::from_str("1243243")?);
+		assert_eq!(f64_to_u256_dec(1.243_243_343_254_111, 15), U256::from_str("1243243343254111")?);
+		// NOTE: due to 15 decimals limitation by IEEE. in the end there will be no round off, but
+		// some values. 1243243343254110976 != 1243243343254111
+		assert_ne!(f64_to_u256_dec(1.243_243_343_254_111, 18), U256::from_str("1243243343254111")?);
+
+		Ok(())
+	}
 }
