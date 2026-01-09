@@ -672,6 +672,27 @@ pub struct PreOcpValues {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValuesNcw {
+	/// Is coin allowance sufficient?
+	/// NOTE: This field is redundant. But for direct use, added this field. Else, we have to
+	/// convert required_allowance to U256 to check if it's zero.
+	pub is_suff: bool,
+	/// User need to approve this value. E.g. "3.354343" USDT
+	/// ### Usage
+	/// - show as formatted in toast in UI.
+	pub required_allowance: String,
+	/// Balance is formatted. E.g. "243.354343" USDT
+	/// ### Usage
+	/// - display in UI
+	/// - compare with amount for err.
+	pub balance: String,
+	/// Est. fees is formatted. E.g. "1.23243" USDT
+	/// ### Usage
+	/// - display in UI
+	pub est_fees: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+pub struct PreOcpValuesNcwParams {
 	/// Allowance to `Permit2` need to use for comparo. So, "U256" in String.
 	/// ### Usage
 	/// - compare with amount for est. gas_usage
