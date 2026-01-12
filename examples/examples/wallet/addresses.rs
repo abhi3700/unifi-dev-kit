@@ -24,9 +24,9 @@ async fn main() -> eyre::Result<()> {
 
 	let addresses = with_spinner(
 		spinoff::spinners::Dots.into(),
-		format!("Fetching wallet addresses ").yellow().to_string(),
+		"Fetching wallet addresses ".to_string().yellow().to_string(),
 		sdk.get_user_wallet_addresses(user_id),
-		Some(format!("Wallet addresses: ").bold().to_string()),
+		Some("Wallet addresses: ".to_string().bold().to_string()),
 		true,
 	)
 	.await
