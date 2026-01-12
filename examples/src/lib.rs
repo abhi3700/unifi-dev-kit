@@ -171,7 +171,7 @@ fn print_wallet_card_coin(coin: StableCoin, price: &str, balance: &str, value: &
 		format!("{coin:?}").bold(),
 		format!("${value}").bold().truecolor(0, 200, 130) // UniFi green
 	);
-	println!("  {} {}", "Price:  ".bright_black(), format!("${price}"));
+	println!("  {} ${}", "Price:  ".bright_black(), price);
 	println!("  {} {}", "Balance:".bright_black(), balance);
 	println!();
 	println!(
