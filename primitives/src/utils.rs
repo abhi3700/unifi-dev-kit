@@ -16,7 +16,7 @@ pub fn fmt_value(num_in_u256_str: &str, coin: StableCoin) -> eyre::Result<String
 }
 
 pub fn is_value_gte(num_in_u256_str: &str, amount: &str, coin_decimals: u8) -> eyre::Result<bool> {
-	Ok(num_in_u256_str.parse::<U256>()? >= parse_human_fmt_to_u256(amount, coin_decimals)?)
+	Ok(num_in_u256_str.parse::<U256>()? >= parse_human_fmt_to_u256(amount, coin_decimals, true)?)
 }
 
 /// Parse human readable format str to U256
@@ -31,7 +31,17 @@ pub fn is_value_gte(num_in_u256_str: &str, amount: &str, coin_decimals: u8) -> e
 /// - User entering amount as String compared to fetched net Onchain balance (U256) as validation.
 ///
 /// NOTE: All tests inside Base layer.
-pub fn parse_human_fmt_to_u256(value: &str, coin_decimals: u8) -> eyre::Result<U256> {
+///
+/// ## Arguments
+/// - use_in_ui:
+///   - `false`: for precision during math calculation, value might be much bigger than coin
+///     decimals.
+///   - `true`: Usage inside web app, to show err when value's decimals > coin_decimals.
+pub fn parse_human_fmt_to_u256(
+	value: &str,
+	coin_decimals: u8,
+	use_in_ui: bool,
+) -> eyre::Result<U256> {
 	// NOTE: this line added due to a small case where in `pending_amount` field in DB is set to
 	// "0E-18" instead of "0.00000000...000" for DAI. It was found that this was done inside
 	// `execute_bundle` fn during u128 arithmetic at mongoDB level that can't be controlled from
@@ -45,7 +55,12 @@ pub fn parse_human_fmt_to_u256(value: &str, coin_decimals: u8) -> eyre::Result<U
 
 	// Parse and scale the fractional part
 	let fractional_part = if let Some(frac) = parts.get(1) {
-		ensure!(frac.len() <= coin_decimals as usize, UfiError::MaxDecimalsReached(coin_decimals));
+		if use_in_ui {
+			ensure!(
+				frac.len() <= coin_decimals as usize,
+				UfiError::MaxDecimalsReached(coin_decimals)
+			);
+		}
 		let scale = 10u128.pow(frac.len() as u32);
 		let frac_num = frac.parse::<u128>().unwrap_or(0); // Parse fractional digits as integer
 		U256::from(frac_num) * U256::from(10u128.pow(coin_decimals as u32)) / U256::from(scale)
@@ -60,29 +75,6 @@ pub fn parse_human_fmt_to_u256(value: &str, coin_decimals: u8) -> eyre::Result<U
 	// Scale the whole part and combine with fractional part
 	let scaled_whole_part = whole_part * U256::from(10u128.pow(coin_decimals as u32));
 	Ok(scaled_whole_part + fractional_part)
-}
-
-/// Convert from f64 to U256 without rounding off.
-/// Normally, "3.819636527426028" returns "4" using `U256::from(..)`. To prevent this
-/// rounding-off, we need to truncate to only valid decimals like 6 for USDT, 18 for DAI, etc.
-///
-/// WARN: There is a round-off in case of 16+ decimals as IEEE limit is set to 15 decimals.
-pub fn f64_to_u256_dec(input: f64, decimals: u8) -> U256 {
-	if !input.is_finite() || input <= 0.0 {
-		return U256::ZERO;
-	}
-
-	// Convert decimals to a power of 10
-	let multiplier = 10u64.pow(decimals as u32) as f64;
-
-	// Multiply the input by the multiplier to shift the decimal point
-	let scaled_input = input * multiplier;
-
-	// Convert the scaled float to an integer type safely
-	let integer_part = scaled_input.trunc() as u128;
-
-	// Convert the integer to U256
-	U256::from(integer_part)
 }
 
 /// Compute Est. fees for NC Pay.
@@ -131,7 +123,7 @@ pub fn compute_est_fees_ncw(
 	let coin_decimals = coin.decimals();
 	let allowance = U256::from_str(allowance_str).wrap_err("Failed to parse allowance")?;
 	let mut tot_amount = U256::from_str(tot_amount_u256).wrap_err("Failed to parse amount")?;
-	let balance = parse_human_fmt_to_u256(balance_str, coin_decimals)?;
+	let balance = parse_human_fmt_to_u256(balance_str, coin_decimals, true)?;
 
 	// 2. Early Balance Check (Fail fast)
 	if tot_amount.gt(&balance) {
@@ -148,7 +140,7 @@ pub fn compute_est_fees_ncw(
 
 	// 4. Define Calculation Logic (Closure to handle repetition)
 	// Returns: (Calculated Fee U256, Is Allowance Sufficient)
-	let calc_snapshot = |target_amt: U256| -> (U256, U256) {
+	let calc_snapshot = |target_amt: U256| -> eyre::Result<(U256, U256)> {
 		// NOTE: For C Pay, allowance is either 0 or MAX unlike in NC Pay.
 		let is_suff = !allowance.is_zero() && allowance.ge(&target_amt);
 
@@ -161,12 +153,13 @@ pub fn compute_est_fees_ncw(
 		// fee = (gas_usage * gas_price * gas_token_price) / (coin_price * 10^decimals)
 		let est_gas_fee = (est_gas_usage * gas_price) as f64;
 		let est_fee_f64 = est_gas_fee * gas_token_price / price_denom;
+		let est_fee_u256 = parse_human_fmt_to_u256(&est_fee_f64.to_string(), coin_decimals, false)?;
 
-		(f64_to_u256_dec(est_fee_f64, coin_decimals), required_allowance_val)
+		Ok((est_fee_u256, required_allowance_val))
 	};
 
 	// 5. Initial Calculation
-	let (mut est_fee_u256, mut required_allowance_val) = calc_snapshot(tot_amount);
+	let (mut est_fee_u256, mut required_allowance_val) = calc_snapshot(tot_amount)?;
 
 	// 6. Conditional Re-calculation (If fee is excluded, total amount increases)
 	if !is_fee_incl {
@@ -176,7 +169,7 @@ pub fn compute_est_fees_ncw(
 		}
 
 		// Check if adding the fee pushed us over the allowance threshold
-		(est_fee_u256, required_allowance_val) = calc_snapshot(tot_amount);
+		(est_fee_u256, required_allowance_val) = calc_snapshot(tot_amount)?;
 	}
 
 	// 7. Format Output
@@ -199,7 +192,7 @@ pub fn fmt_output(value: U256, coin_decimals: u8) -> eyre::Result<String> {
 /// - In SDK layer, OCP for sanitizing input using `sanitize_and_parse_amount.is_ok()` if value not
 ///   required. Ideally we need the value in U256 to compare with fetched balance & est fees.
 pub fn sanitize_and_parse_amount(amount: &str, coin: StableCoin) -> eyre::Result<U256> {
-	let amount_u256 = parse_human_fmt_to_u256(amount, coin.decimals())?;
+	let amount_u256 = parse_human_fmt_to_u256(amount, coin.decimals(), true)?;
 	ensure!(!amount_u256.is_zero(), UfiError::ZeroAmount);
 	Ok(amount_u256)
 }
@@ -255,25 +248,4 @@ pub fn validate_and_parse_amount_wo_sanitize(
 	ensure!(total_amount_u256.le(&balance_u256), UfiError::InsufficientBalance);
 
 	Ok(())
-}
-
-/// ```
-/// cargo test --package unifi-sdk-primitives --lib --release -F utils -- utils::tests --nocapture
-/// ```
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn test_f64_to_u256_dec() -> eyre::Result<()> {
-		assert_eq!(f64_to_u256_dec(0.0, 6), U256::from_str("0")?);
-		assert_eq!(f64_to_u256_dec(1.243243, 6), U256::from_str("1243243")?);
-		assert_eq!(f64_to_u256_dec(1.243243343254, 6), U256::from_str("1243243")?);
-		assert_eq!(f64_to_u256_dec(1.243_243_343_254_111, 15), U256::from_str("1243243343254111")?);
-		// NOTE: due to 15 decimals limitation by IEEE. in the end there will be no round off, but
-		// some values. 1243243343254110976 != 1243243343254111
-		assert_ne!(f64_to_u256_dec(1.243_243_343_254_111, 18), U256::from_str("1243243343254111")?);
-
-		Ok(())
-	}
 }
