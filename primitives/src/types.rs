@@ -494,6 +494,8 @@ pub struct OcPayReceipt {
 	pub to_addresses: Vec<String>,
 	pub amounts: Vec<String>,
 	pub memo: Memo,
+	pub est_fee: String,
+	pub act_fee: String,
 	pub tx_hash: String,
 	pub tx_hashes: Vec<String>,
 	pub status: OcPayReceiptStatus,
@@ -667,7 +669,7 @@ pub struct PreOcpPayload {
 pub struct PreOcpValues {
 	pub is_coin_allowance_zero: bool,
 	pub balance: String,
-	pub est_fees: String,
+	pub est_fee: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
@@ -685,10 +687,10 @@ pub struct PreOcpValuesNcw {
 	/// - display in UI
 	/// - compare with amount for err.
 	pub balance: String,
-	/// Est. fees is formatted. E.g. "1.23243" USDT
+	/// Est. fee is formatted. E.g. "1.23243" USDT
 	/// ### Usage
 	/// - display in UI
-	pub est_fees: String,
+	pub est_fee: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]

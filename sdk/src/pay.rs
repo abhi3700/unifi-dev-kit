@@ -24,9 +24,9 @@ impl Sdk {
 		Sdk::process_response::<String>(resp).await
 	}
 
-	/// Fetch the pre-ocp est. total fees for the given coin & chain in case of on-chain
+	/// Fetch the pre-ocp est. total fee for the given coin & chain in case of on-chain
 	/// payment (OCP) by the user.
-	pub async fn fetch_pre_ocp_total_est_fees(
+	pub async fn fetch_pre_ocp_total_est_fee(
 		&self,
 		user_id: &str,
 		payload: PreOcpPayload,
@@ -44,9 +44,9 @@ impl Sdk {
 		Sdk::process_response::<String>(resp).await
 	}
 
-	/// Fetch the pre-ocp balance & est. total fees for the given coin & chain in case of on-chain
+	/// Fetch the pre-ocp balance & est. total fee for the given coin & chain in case of on-chain
 	/// payment (OCP) by the user.
-	pub async fn fetch_pre_ocp_balance_and_est_fees(
+	pub async fn fetch_pre_ocp_balance_and_est_fee(
 		&self,
 		user_id: &str,
 		payload: PreOcpPayload,

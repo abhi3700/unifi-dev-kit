@@ -39,7 +39,7 @@ GET {{HOST}}/payment/onchain/est_fee/{{USER_ID}}/{{chain}}/{{coin}}
 # @name FetchPreOcpBalanceAndEstFees
 @chain=Sepolia
 @coin=USDT
-GET {{HOST}}/payment/onchain/balance_est_fees/{{USER_ID}}/{{chain}}/{{coin}}
+GET {{HOST}}/payment/onchain/balance_est_fee/{{USER_ID}}/{{chain}}/{{coin}}
 {{AUTH_HEADER}}
 
 ###
