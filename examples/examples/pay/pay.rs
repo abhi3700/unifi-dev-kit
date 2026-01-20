@@ -46,10 +46,10 @@ async fn main() -> eyre::Result<()> {
 
 	println!("================================================");
 
-	let PreOcpValues { is_coin_allowance_zero, balance: net_balance, est_fees } = with_spinner(
+	let PreOcpValues { is_coin_allowance_zero, balance: net_balance, est_fee } = with_spinner(
 		spinoff::spinners::Dots.into(),
 		"⏳ Fetching balance & fees...".to_string(),
-		sdk.fetch_pre_ocp_balance_and_est_fees(
+		sdk.fetch_pre_ocp_balance_and_est_fee(
 			user_id,
 			PreOcpPayload { coin: selected_coin, chain: selected_chain },
 		),
@@ -60,16 +60,16 @@ async fn main() -> eyre::Result<()> {
 	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 
 	println!("{}", format!("👛 Net balance: {}", net_balance).green().bold());
-	println!("{}", format!("💸 Estimated fees: {}", est_fees).green().bold());
+	println!("{}", format!("💸 Estimated fee: {}", est_fee).green().bold());
 	if is_coin_allowance_zero {
 		println!(
 			"{}",
-			format!("⚠️ Est. fees include {selected_coin} approval cost.")
+			format!("⚠️ Est. fee include {selected_coin} approval cost.")
 				.bright_yellow()
 				.bold()
 		);
 	}
-	if validate_and_parse_amount(amount, selected_coin, &net_balance, &est_fees).is_err() {
+	if validate_and_parse_amount(amount, selected_coin, &net_balance, &est_fee).is_err() {
 		println!(
 			"{}",
 			"Insufficient balance 💰.\nPlease 📩 deposit or request faucet (on Sepolia testnet)"

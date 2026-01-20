@@ -77,7 +77,7 @@ pub fn parse_human_fmt_to_u256(
 	Ok(scaled_whole_part + fractional_part)
 }
 
-/// Compute Est. fees for NC Pay.
+/// Compute Est. fee for NC Pay.
 ///
 ///
 /// ## Notes
@@ -85,7 +85,7 @@ pub fn parse_human_fmt_to_u256(
 ///   synchronously.
 /// - If the fee is:
 ///   - excl: We just have the entered amount. So, there is a `est fees` computed after considering
-///     only amount & then `amount + est_fees` is checked against allowance, etc.
+///     only amount & then `amount + est_fee` is checked against allowance, etc.
 ///   - incl: We have to do the maths once & then
 ///
 /// ## Arguments
@@ -104,7 +104,7 @@ pub fn parse_human_fmt_to_u256(
 /// - required_allowance: X value is to be approved by payer to Permit2. E.g. `21.34545` USDT or
 ///   "0.00" USDT.
 /// - formatted est fees. E.g. `0.132433` USDT or "0.00" USDT.
-pub fn compute_est_fees_ncw(
+pub fn compute_est_fee_ncw(
 	payload: PreOcpPayload,
 	tot_amount_u256: &str,
 	pre_ocp_values: &PreOcpValuesNcwParams,
@@ -197,10 +197,10 @@ pub fn sanitize_and_parse_amount(amount: &str, coin: StableCoin) -> eyre::Result
 	Ok(amount_u256)
 }
 
-/// Validates the amount (with est. fees) against the user's balance.
+/// Validates the amount (with est. fee) against the user's balance.
 ///
 /// ## Notes
-/// - balance & est_fees, is_allowance_zero are fetched via fn `fetch_pre_ocp_balance_and_est_fees`.
+/// - balance & est_fee, is_allowance_zero are fetched via fn `fetch_pre_ocp_balance_and_est_fee`.
 /// - In the FE as these are already fetched once & values shown in UI, we don't need to fetch again
 ///   inside the fn. That's why we are using the fetched values.
 ///
@@ -212,13 +212,13 @@ pub fn validate_and_parse_amount(
 	amount: &str,
 	coin: StableCoin,
 	balance: &str,
-	est_fees: &str,
+	est_fee: &str,
 ) -> eyre::Result<()> {
 	let amount_u256 = sanitize_and_parse_amount(amount, coin)?;
 	let balance_u256: U256 = parse_units(balance, coin.decimals())?.into();
-	let est_fees_u256: U256 = parse_units(est_fees, coin.decimals())?.into();
+	let est_fee_u256: U256 = parse_units(est_fee, coin.decimals())?.into();
 
-	let total_amount_u256 = amount_u256.checked_add(est_fees_u256).ok_or_eyre(
+	let total_amount_u256 = amount_u256.checked_add(est_fee_u256).ok_or_eyre(
 		"Calculation error: Failed to add amount and estimated fees — possible overflow",
 	)?;
 
@@ -235,13 +235,13 @@ pub fn validate_and_parse_amount_wo_sanitize(
 	amount: &str,
 	coin: StableCoin,
 	balance: &str,
-	est_fees: &str,
+	est_fee: &str,
 ) -> eyre::Result<()> {
 	let amount_u256 = amount.parse::<U256>()?;
 	let balance_u256: U256 = parse_units(balance, coin.decimals())?.into();
-	let est_fees_u256: U256 = parse_units(est_fees, coin.decimals())?.into();
+	let est_fee_u256: U256 = parse_units(est_fee, coin.decimals())?.into();
 
-	let total_amount_u256 = amount_u256.checked_add(est_fees_u256).ok_or_eyre(
+	let total_amount_u256 = amount_u256.checked_add(est_fee_u256).ok_or_eyre(
 		"Calculation error: Failed to add amount and estimated fees — possible overflow",
 	)?;
 
