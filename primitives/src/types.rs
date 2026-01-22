@@ -485,7 +485,7 @@ pub struct OcPayHistory {
 ///
 /// ## Usage
 /// For SDK to retrieve the receipt from API response.
-#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct OcPayReceipt {
 	pub id: String,
 	pub user_id: String,
@@ -501,6 +501,36 @@ pub struct OcPayReceipt {
 	pub status: OcPayReceiptStatus,
 	pub start_ts_us: i64,
 	pub end_ts_us: i64,
+}
+
+impl Default for OcPayReceipt {
+	fn default() -> Self {
+		Self {
+			id: Default::default(),
+			user_id: Default::default(),
+			chain: Default::default(),
+			coins: Default::default(),
+			to_addresses: Default::default(),
+			amounts: Default::default(),
+			memo: Default::default(),
+			est_fee: "0".to_owned(),
+			act_fee: "0".to_owned(),
+			tx_hash: Default::default(),
+			tx_hashes: Default::default(),
+			status: Default::default(),
+			start_ts_us: Default::default(),
+			end_ts_us: Default::default(),
+		}
+	}
+}
+
+impl OcPayReceipt {
+	/// This fn is used to hide the savings field in the Receipt UI.
+	///
+	/// `true` => legacy receipt
+	pub fn is_old(&self) -> bool {
+		self.est_fee.eq("0") && self.act_fee.eq("0")
+	}
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Default)]
