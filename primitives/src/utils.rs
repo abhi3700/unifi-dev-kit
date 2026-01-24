@@ -106,7 +106,7 @@ pub fn parse_human_fmt_to_u256(
 /// - formatted est fees. E.g. `0.132433` USDT or "0.00" USDT.
 pub fn compute_est_fee_ncw(
 	payload: PreOcpPayload,
-	tot_amount_u256: &str,
+	tot_amount_u256_str: &str,
 	pre_ocp_values: &PreOcpValuesNcwParams,
 	is_fee_incl: bool,
 ) -> eyre::Result<(bool, String, String)> {
@@ -122,7 +122,7 @@ pub fn compute_est_fee_ncw(
 
 	let coin_decimals = coin.decimals();
 	let allowance = U256::from_str(allowance_str).wrap_err("Failed to parse allowance")?;
-	let mut tot_amount = U256::from_str(tot_amount_u256).wrap_err("Failed to parse amount")?;
+	let mut tot_amount = U256::from_str(tot_amount_u256_str).wrap_err("Failed to parse amount")?;
 	let balance = parse_human_fmt_to_u256(balance_str, coin_decimals, true)?;
 
 	// 2. Early Balance Check (Fail fast)
