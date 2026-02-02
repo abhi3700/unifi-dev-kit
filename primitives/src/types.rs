@@ -689,7 +689,7 @@ impl FromStr for PaidPlanDuration {
 	}
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Copy)]
 pub struct PreOcpPayload {
 	pub coin: StableCoin,
 	pub chain: ChainName,
@@ -748,7 +748,7 @@ pub struct PreOcpValuesNcwParams {
 	pub coin_price: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, /* Props, */ PartialEq, Default)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PayOnchainPayload {
 	pub chain: ChainName,
 	pub coin: StableCoin,
