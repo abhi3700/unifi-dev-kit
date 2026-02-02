@@ -90,8 +90,9 @@ pub fn parse_human_fmt_to_u256(
 ///
 /// ## Arguments
 /// - `payload`: selected {coin, chain}
-/// - `tot_amount`: sum of [amount1, amount2, .., admin_fee]. If the value is "112.432432" USDT,
-///   then parse as u256 str i.e. "112432432".
+/// - `amt_or_tot_amount`: sum of [amount1, amount2, .., admin_fee]. E.g. "112.432432" USDT.
+///   - fee_excl => then parse entered amount. So, amount parsed.
+///   - fee_incl => then parse entered amount + est_fee. So, (amount + est_fee) parsed.
 /// - `pre_ocp_values`: params (from fn: `prefetch_ncw_balance_fee_params`) for calculating est fees
 ///   synchronously.
 /// - `is_fee_incl`
@@ -106,7 +107,7 @@ pub fn parse_human_fmt_to_u256(
 /// - formatted est fees. E.g. `0.132433` USDT or "0.00" USDT.
 pub fn compute_est_fee_ncw(
 	payload: PreOcpPayload,
-	tot_amount_u256_str: &str,
+	amt_or_tot_amount: &str,
 	pre_ocp_values: &PreOcpValuesNcwParams,
 	is_fee_incl: bool,
 ) -> eyre::Result<(bool, String, String)> {
@@ -122,8 +123,10 @@ pub fn compute_est_fee_ncw(
 
 	let coin_decimals = coin.decimals();
 	let allowance = U256::from_str(allowance_str).wrap_err("Failed to parse allowance")?;
-	let mut tot_amount = U256::from_str(tot_amount_u256_str).wrap_err("Failed to parse amount")?;
-	let balance = parse_human_fmt_to_u256(balance_str, coin_decimals, true)?;
+	let mut tot_amount = parse_human_fmt_to_u256(amt_or_tot_amount, coin_decimals, false)
+		.wrap_err("Failed to parse amount")?;
+	ensure!(!tot_amount.is_zero(), "Amount must be non-zero.");
+	let balance = parse_human_fmt_to_u256(balance_str, coin_decimals, false)?;
 
 	// 2. Early Balance Check (Fail fast)
 	if tot_amount.gt(&balance) {
