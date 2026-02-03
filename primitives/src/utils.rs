@@ -125,7 +125,11 @@ pub fn compute_est_fee_ncw(
 	let allowance = U256::from_str(allowance_str).wrap_err("Failed to parse allowance")?;
 	let mut tot_amount = parse_human_fmt_to_u256(amt_or_tot_amount, coin_decimals, false)
 		.wrap_err("Failed to parse amount")?;
-	ensure!(!tot_amount.is_zero(), "Amount must be non-zero.");
+
+	// NOTE: Disabled because the Pay UI should display estimated fees before the user
+	// enters an amount (e.g., initial render / empty input state).
+	// ensure!(!tot_amount.is_zero(), "Amount must be non-zero.");
+
 	let balance = parse_human_fmt_to_u256(balance_str, coin_decimals, false)?;
 
 	// 2. Early Balance Check (Fail fast)
