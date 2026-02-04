@@ -155,7 +155,7 @@ pub fn compute_est_fee_ncw(
 	let price_denom = coin_price * 10f64.powi(gas_coin_decimals);
 
 	// 4. Define Calculation Logic (Closure to handle repetition)
-	// Returns: (Calculated Fee U256, Is Allowance Sufficient)
+	// Returns: (Calculated Fee U256, Required allowance val)
 	let calc_snapshot = |target_amt: U256| -> eyre::Result<(U256, U256)> {
 		// NOTE: For C Pay, allowance is either 0 or MAX unlike in NC Pay.
 		let is_suff = !allowance.is_zero() && allowance.ge(&target_amt);
@@ -194,6 +194,38 @@ pub fn compute_est_fee_ncw(
 	let est_fee_fmt = fmt_output(est_fee_u256, coin_decimals)?;
 
 	Ok((is_suff, required_allowance_val_fmt, est_fee_fmt))
+}
+
+/// Get required allowance value.
+///
+/// ## Usage
+/// - After payment page loads, bal & est. fees successfully loaded, then in case of NC, update
+///   required allowance on changing amount input. This required allowance is shown during approval.
+///
+/// ## Arguments
+/// - `amount`: entered amount
+/// - `coin`
+/// - `allowance`: last fetched coin allowance in U256 string.
+/// - `est_fee`: last fetched est_fee
+/// - `is_fee_incl`
+pub fn req_allowance(
+	amount: &str,
+	coin: StableCoin,
+	allowance: &str,
+	est_fee: &str,
+	is_fee_incl: bool,
+) -> eyre::Result<String> {
+	let coin_decimals = coin.decimals();
+	let amount_u256 = parse_human_fmt_to_u256(amount, coin_decimals, false)?;
+	let est_fee_u256 = parse_human_fmt_to_u256(est_fee, coin_decimals, false)?;
+
+	let total_spend = if is_fee_incl { amount_u256 } else { amount_u256 + est_fee_u256 };
+
+	let allowance_u256 = U256::from_str(allowance).wrap_err("Failed to parse allowance")?;
+	let req_allowance =
+		if total_spend.gt(&allowance_u256) { total_spend - allowance_u256 } else { U256::ZERO };
+
+	fmt_output(req_allowance, coin_decimals)
 }
 
 pub fn fmt_output(value: U256, coin_decimals: u8) -> eyre::Result<String> {
