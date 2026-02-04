@@ -43,6 +43,8 @@ async fn main() -> eyre::Result<()> {
 	println!("Payee address: {to_address}");
 	let amount = "10.124";
 	println!("amount: {amount}");
+	// For fee excl. payment
+	let is_fee_incl = false;
 
 	println!("================================================");
 
@@ -69,7 +71,9 @@ async fn main() -> eyre::Result<()> {
 				.bold()
 		);
 	}
-	if validate_and_parse_amount(amount, selected_coin, &net_balance, &est_fee).is_err() {
+	if validate_and_parse_amount(amount, selected_coin, &net_balance, &est_fee, is_fee_incl)
+		.is_err()
+	{
 		println!(
 			"{}",
 			"Insufficient balance 💰.\nPlease 📩 deposit or request faucet (on Sepolia testnet)"
@@ -79,8 +83,6 @@ async fn main() -> eyre::Result<()> {
 	}
 
 	// ==================== Submit payment ==================================
-	// For exclusive payment
-	let is_fee_incl = false;
 	let receipt_id = with_spinner(
 		spinoff::spinners::Dots.into(),
 		"🚀 Processing payment ⏳...".to_string(),

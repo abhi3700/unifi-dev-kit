@@ -86,7 +86,7 @@ pub fn parse_human_fmt_to_u256(
 /// - If the fee is:
 ///   - excl: We just have the entered amount. So, there is a `est fees` computed after considering
 ///     only amount & then `amount + est_fee` is checked against allowance, etc.
-///   - incl: We have to do the maths once & then
+///   - incl: We have to do the maths once & then.
 ///
 /// ## Arguments
 /// - `payload`: selected {coin, chain}
@@ -96,6 +96,14 @@ pub fn parse_human_fmt_to_u256(
 /// - `pre_ocp_values`: params (from fn: `prefetch_ncw_balance_fee_params`) for calculating est fees
 ///   synchronously.
 /// - `is_fee_incl`
+/// - `use_is_ui`: When used in UI, we skip the `InsufficientBalance` check bcoz we don't want the
+///   UI to collapse showing Error card. But, if you are running an example program, then you should
+///   set to `false`, bcoz then the code returns early as `InsufficientBalance`.
+///
+///   There are 2 pages: ApiPlan, FliQPay, where we might set it to false, as we would want the
+/// "InsufficientBalance" to be checked before making the payment. Actually, in these pages, we
+/// don't get to edit the amount, so need to check for it. It is checked once via
+/// `validate_and_parse_amount` fn.
 ///
 /// ## Returns
 /// - `is_coin_allowance_suff`: NOTE: due to this field returned, we don't have to convert the
@@ -110,6 +118,7 @@ pub fn compute_est_fee_ncw(
 	amt_or_tot_amount: &str,
 	pre_ocp_values: &PreOcpValuesNcwParams,
 	is_fee_incl: bool,
+	use_in_ui: bool,
 ) -> eyre::Result<(bool, String, String)> {
 	// 1. Destructure and Parse Inputs immediately
 	let PreOcpPayload { coin, chain } = payload;
@@ -133,7 +142,7 @@ pub fn compute_est_fee_ncw(
 	let balance = parse_human_fmt_to_u256(balance_str, coin_decimals, false)?;
 
 	// 2. Early Balance Check (Fail fast)
-	if tot_amount.gt(&balance) {
+	if !use_in_ui && tot_amount.gt(&balance) {
 		return Err(UfiError::InsufficientBalance.into())
 	}
 
@@ -171,7 +180,7 @@ pub fn compute_est_fee_ncw(
 	// 6. Conditional Re-calculation (If fee is excluded, total amount increases)
 	if !is_fee_incl {
 		tot_amount += est_fee_u256;
-		if tot_amount.gt(&balance) {
+		if !use_in_ui && tot_amount.gt(&balance) {
 			return Err(UfiError::InsufficientBalance.into())
 		}
 
@@ -220,14 +229,20 @@ pub fn validate_and_parse_amount(
 	coin: StableCoin,
 	balance: &str,
 	est_fee: &str,
+	is_fee_incl: bool,
 ) -> eyre::Result<()> {
 	let amount_u256 = sanitize_and_parse_amount(amount, coin)?;
 	let balance_u256: U256 = parse_units(balance, coin.decimals())?.into();
 	let est_fee_u256: U256 = parse_units(est_fee, coin.decimals())?.into();
 
-	let total_amount_u256 = amount_u256.checked_add(est_fee_u256).ok_or_eyre(
-		"Calculation error: Failed to add amount and estimated fees — possible overflow",
-	)?;
+	let total_amount_u256 = if is_fee_incl {
+		amount_u256
+	} else {
+		println!("checked");
+		amount_u256.checked_add(est_fee_u256).ok_or_eyre(
+			"Calculation error: Failed to add amount and estimated fees — possible overflow",
+		)?
+	};
 
 	ensure!(total_amount_u256.le(&balance_u256), UfiError::InsufficientBalance);
 
@@ -243,14 +258,19 @@ pub fn validate_and_parse_amount_wo_sanitize(
 	coin: StableCoin,
 	balance: &str,
 	est_fee: &str,
+	is_fee_incl: bool,
 ) -> eyre::Result<()> {
 	let amount_u256 = amount.parse::<U256>()?;
 	let balance_u256: U256 = parse_units(balance, coin.decimals())?.into();
 	let est_fee_u256: U256 = parse_units(est_fee, coin.decimals())?.into();
 
-	let total_amount_u256 = amount_u256.checked_add(est_fee_u256).ok_or_eyre(
-		"Calculation error: Failed to add amount and estimated fees — possible overflow",
-	)?;
+	let total_amount_u256 = if is_fee_incl {
+		amount_u256
+	} else {
+		amount_u256.checked_add(est_fee_u256).ok_or_eyre(
+			"Calculation error: Failed to add amount and estimated fees — possible overflow",
+		)?
+	};
 
 	ensure!(total_amount_u256.le(&balance_u256), UfiError::InsufficientBalance);
 
