@@ -100,7 +100,7 @@ pub fn parse_human_fmt_to_u256(
 ///   UI to collapse showing Error card. But, if you are running an example program, then you should
 ///   set to `false`, bcoz then the code returns early as `InsufficientBalance`.
 ///
-///   There are 2 pages: ApiPlan, FliQPay, where we might set it to false, as we would want the
+/// There are 2 pages: ApiPlan, FliQPay, where we might set it to false, as we would want the
 /// "InsufficientBalance" to be checked before making the payment. Actually, in these pages, we
 /// don't get to edit the amount, so need to check for it. It is checked once via
 /// `validate_and_parse_amount` fn.
@@ -193,10 +193,14 @@ pub fn compute_est_fee_ncw(
 	let required_allowance_val_fmt = fmt_output(required_allowance_val, coin_decimals)?;
 	let est_fee_fmt = fmt_output(est_fee_u256, coin_decimals)?;
 
+	// Ok((is_suff, required_allowance_val.to_string(), est_fee_fmt))
 	Ok((is_suff, required_allowance_val_fmt, est_fee_fmt))
 }
 
-/// Get required allowance value.
+/// Get required allowance value (considering practical case).
+///
+/// NOTE: Due to change in est. fees so that user doesn't have to approve min. amount (instead of
+/// `U256::MAX`) multiple times. So, add `10$` to it for safety.
 ///
 /// ## Usage
 /// - After payment page loads, bal & est. fees successfully loaded, then in case of NC, update
@@ -208,6 +212,9 @@ pub fn compute_est_fee_ncw(
 /// - `allowance`: last fetched coin allowance in U256 string.
 /// - `est_fee`: last fetched est_fee
 /// - `is_fee_incl`
+///
+/// ## Returns
+/// in decimals E.g. "10.124" USDT
 pub fn req_allowance(
 	amount: &str,
 	coin: StableCoin,
@@ -219,17 +226,53 @@ pub fn req_allowance(
 	let amount_u256 = parse_human_fmt_to_u256(amount, coin_decimals, false)?;
 	let est_fee_u256 = parse_human_fmt_to_u256(est_fee, coin_decimals, false)?;
 
-	let total_spend = if is_fee_incl { amount_u256 } else { amount_u256 + est_fee_u256 };
+	let mut total_spend = if is_fee_incl { amount_u256 } else { amount_u256 + est_fee_u256 };
+	// NOTE: add safety val.
+	total_spend += U256::from(10_u128) * U256::from(10).pow(U256::from(coin_decimals));
 
-	let allowance_u256 = U256::from_str(allowance).wrap_err("Failed to parse allowance")?;
-	let req_allowance =
-		if total_spend.gt(&allowance_u256) { total_spend - allowance_u256 } else { U256::ZERO };
+	// let allowance_u256 = U256::from_str(allowance).wrap_err("Failed to parse allowance")?;
+	let allowance_u256 = parse_human_fmt_to_u256(allowance, coin_decimals, false)?;
+	let req_allowance = if total_spend.gt(&allowance_u256) {
+		total_spend - allowance_u256
+	} else {
+		// also includes the case: `allowance == U256::MAX`
+		U256::ZERO
+	};
 
 	fmt_output(req_allowance, coin_decimals)
 }
 
+/// Use this instead of `format_units` as it has diff. Err type. \
+/// Also, format the zero value as per UI
 pub fn fmt_output(value: U256, coin_decimals: u8) -> eyre::Result<String> {
 	if value.is_zero() { Ok("0.00".to_string()) } else { Ok(format_units(value, coin_decimals)?) }
+}
+
+/// Get total spend
+///
+/// ```
+/// total_spend = amount + est_fee
+/// ```
+///
+/// ## Usage
+/// - In Web app, this is shown to
+pub fn total_spend(
+	amount: &str,
+	est_fee: &str,
+	coin: StableCoin,
+	is_fee_incl: bool,
+) -> eyre::Result<String> {
+	if is_fee_incl {
+		return Ok(amount.to_owned())
+	}
+
+	let coin_decimals = coin.decimals();
+	let amt_u256 = parse_human_fmt_to_u256(amount, coin_decimals, false)?;
+	let estfee_u256 = parse_human_fmt_to_u256(est_fee, coin_decimals, false)?;
+
+	let total_spend = amt_u256 + estfee_u256;
+
+	fmt_output(total_spend, coin_decimals)
 }
 
 /// Validates the amount string and converts it to `U256`.
@@ -307,4 +350,36 @@ pub fn validate_and_parse_amount_wo_sanitize(
 	ensure!(total_amount_u256.le(&balance_u256), UfiError::InsufficientBalance);
 
 	Ok(())
+}
+
+/// Test
+/// ```sh
+/// RUSTFLAGS="-Awarnings" cargo t -p unifi-sdk-primitives -F utils -- utils::tests --show-output
+/// ```
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn req_allowance_tests() {
+		// Test with USDT token
+		assert_eq!(
+			req_allowance("1", StableCoin::USDT, "0", "0.112192", false).unwrap(),
+			"11.112192"
+		);
+		assert_eq!(
+			req_allowance("1", StableCoin::USDT, "0", "0.112192", true).unwrap(),
+			"11.000000"
+		);
+
+		// Test with DAI token
+		assert_eq!(
+			req_allowance("1", StableCoin::DAI, "0", "0.112192", false).unwrap(),
+			"11.112192000000000000"
+		);
+		assert_eq!(
+			req_allowance("1", StableCoin::DAI, "0", "0.112192", true).unwrap(),
+			"11.000000000000000000"
+		);
+	}
 }
