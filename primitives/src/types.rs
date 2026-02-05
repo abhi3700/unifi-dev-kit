@@ -1,3 +1,4 @@
+use alloy_primitives::{Address, address};
 use bson::{
 	Bson::{self, Document as BsonDocument},
 	doc,
@@ -164,6 +165,17 @@ impl ChainName {
 			(StableCoin::USDT, ChainName::Anvil) => est_gas,
 			(StableCoin::USDC, ChainName::Anvil) => est_gas,
 			(StableCoin::DAI, ChainName::Anvil) => est_gas,
+		}
+	}
+
+	/// Get Permit2 Contract address for supported chain
+	pub fn get_permit2_sc_addr(&self) -> Address {
+		use ChainName as C;
+		let addr = address!("000000000022D473030F116dDEE9F6B43aC78BA3");
+		match self {
+			C::Ethereum => addr,
+			C::Polygon => addr,
+			C::Sepolia | C::Anvil => addr,
 		}
 	}
 }
