@@ -2,6 +2,8 @@ use serde::Deserialize;
 use std::fmt::Debug;
 
 pub mod errors;
+pub mod evm;
+/// TODO: put inside evm module
 pub mod permit2;
 pub mod types;
 #[cfg(feature = "utils")]
