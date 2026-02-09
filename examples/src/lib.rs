@@ -111,9 +111,13 @@ pub fn display_pay_receipt(receipt: OcPayReceipt) {
 
 	// Status with color
 	let status = match receipt.status {
-		unifi_sdk_primitives::types::OcPayReceiptStatus::Completed => "Completed".green().bold(),
 		unifi_sdk_primitives::types::OcPayReceiptStatus::Processing => "Processing".yellow().bold(),
 		unifi_sdk_primitives::types::OcPayReceiptStatus::Failed => "Failed".red().bold(),
+		unifi_sdk_primitives::types::OcPayReceiptStatus::Confirmed => "Confirmed".green().bold(),
+		unifi_sdk_primitives::types::OcPayReceiptStatus::Finalized =>
+			"Finalized".bright_blue().bold(),
+		unifi_sdk_primitives::types::OcPayReceiptStatus::Reorged =>
+			"Reorged".bright_magenta().bold(),
 	};
 	println!("{} {}", "Status:".bright_blue().bold(), status);
 
