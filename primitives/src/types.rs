@@ -510,6 +510,8 @@ pub struct OcPayReceipt {
 	pub act_fee: String,
 	pub tx_hash: String,
 	pub tx_hashes: Vec<String>,
+	/// Block numbers
+	pub block_nums: Vec<String>,
 	pub status: OcPayReceiptStatus,
 	pub start_ts_us: i64,
 	pub end_ts_us: i64,
@@ -529,6 +531,7 @@ impl Default for OcPayReceipt {
 			act_fee: "0".to_owned(),
 			tx_hash: Default::default(),
 			tx_hashes: Default::default(),
+			block_nums: Default::default(),
 			status: Default::default(),
 			start_ts_us: Default::default(),
 			end_ts_us: Default::default(),
@@ -547,10 +550,17 @@ impl OcPayReceipt {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Default)]
 pub enum OcPayReceiptStatus {
-	Failed,
+	/// Payment submitted to UniFi's sequencer.
 	#[default]
 	Processing,
-	Completed,
+	/// Payment submitted to UniFi's sequencer is found as invalid (insufficient balance, etc..).
+	Failed,
+	/// Payment submitted was sent to onchain i.e. added to a block & tx_hash generated.
+	Confirmed,
+	/// Completed payment is now finalized i.e. added to a block (with finalized tag now).
+	Finalized,
+	/// Completed payment is not added to canonical chain.
+	Reorged,
 }
 
 impl Display for OcPayReceiptStatus {
