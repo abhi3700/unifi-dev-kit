@@ -500,7 +500,9 @@ pub struct OcPayHistory {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct OcPayReceipt {
 	pub id: String,
+	/// Can be used to detect if payer was custodial or non-custodial.
 	pub user_id: String,
+	pub is_fee_incl: bool,
 	pub chain: ChainName,
 	pub coins: Vec<StableCoin>,
 	pub to_addresses: Vec<String>,
@@ -522,6 +524,7 @@ impl Default for OcPayReceipt {
 		Self {
 			id: Default::default(),
 			user_id: Default::default(),
+			is_fee_incl: Default::default(),
 			chain: Default::default(),
 			coins: Default::default(),
 			to_addresses: Default::default(),
