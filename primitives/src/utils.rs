@@ -3,7 +3,7 @@ use crate::{
 	types::{Coin, GasEstimate, PreOcpPayload, PreOcpValuesNcwParams, StableCoin},
 };
 use alloy_primitives::{
-	U256,
+	Address, U256,
 	utils::{format_units, parse_units},
 };
 use eyre::{Context, OptionExt, ensure};
@@ -17,6 +17,10 @@ pub fn fmt_value(num_in_u256_str: &str, coin: StableCoin) -> eyre::Result<String
 
 pub fn is_value_gte(num_in_u256_str: &str, amount: &str, coin_decimals: u8) -> eyre::Result<bool> {
 	Ok(num_in_u256_str.parse::<U256>()? >= parse_human_fmt_to_u256(amount, coin_decimals, true)?)
+}
+
+pub fn sanitize_address(address: &str) -> bool {
+	address.parse::<Address>().is_ok()
 }
 
 /// Parse human readable format str to U256

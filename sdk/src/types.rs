@@ -62,14 +62,10 @@ impl ApiHandler {
 			AH::GetUserWalletAddress => "/wallet/address/{user_id}/{chain}",
 			AH::GetUserWalletAddresses => "/wallet/addresses/{user_id}",
 			// Onchain
-			AH::GetOcChainCoinBalance =>
-				"/wallet/onchain/balance/{user_id}/{chain}/{coin}/{is_custodial}",
-			AH::GetOcChainAllCoinsBalances =>
-				"/wallet/onchain/balances/{user_id}/{chain}/{is_custodial}",
-			AH::GetWalletBalancesByChain =>
-				"/wallet/balances/by_chain/{user_id}/{chain}/{is_custodial}",
-			AH::GetWalletBalancesByCoin =>
-				"/wallet/balances/by_coin/{user_id}/{coin}/{is_custodial}",
+			AH::GetOcChainCoinBalance => "/wallet/onchain/balance/{user_id}/{chain}/{coin}",
+			AH::GetOcChainAllCoinsBalances => "/wallet/onchain/balances/{user_id}/{chain}",
+			AH::GetWalletBalancesByChain => "/wallet/balances/by_chain/{user_id}/{chain}",
+			AH::GetWalletBalancesByCoin => "/wallet/balances/by_coin/{user_id}/{coin}",
 
 			/* Payment Onchain */
 			AH::FetchPreOcpNetOnchainBalance =>
@@ -77,7 +73,7 @@ impl ApiHandler {
 			AH::FetchPreOcpTotalEstFees => "/payment/onchain/est_fee/{user_id}/{chain}/{coin}",
 			AH::FetchPreOcpBalanceAndEstFees =>
 				"/payment/onchain/balance_est_fee/{user_id}/{chain}/{coin}",
-			AH::RequestFaucet => "/faucet/{user_id}/{coin}/{chain}/{is_custodial}",
+			AH::RequestFaucet => "/faucet/{user_id}/{coin}/{chain}",
 			AH::PayOnchain => "/payment/onchain/{user_id}/{is_fee_incl}",
 			AH::FliqNotifyPayer =>
 				"/payment/onchain/fliq/notify/payer/{pid}/{chain}/{coin}/{to_address}/{amount}",

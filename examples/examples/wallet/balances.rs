@@ -34,7 +34,7 @@ async fn main() -> eyre::Result<()> {
 	let balances = with_spinner(
 		spinoff::spinners::Dots.into(),
 		format!("Get balances on {selected_chain}:").yellow().to_string(),
-		sdk.get_wallet_balances_by_chain(user_id, selected_chain, true),
+		sdk.get_wallet_balances_by_chain(user_id, selected_chain),
 		Some(format!("Get balances on {selected_chain}:").bold().to_string()),
 		true,
 	)
