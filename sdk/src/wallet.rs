@@ -1,8 +1,9 @@
 use super::Sdk;
 use crate::types::ApiHandler;
 use std::collections::HashMap;
-use unifi_sdk_primitives::types::{
-	ChainName, ChainProtocol, StableCoin, WalletBalancesByChain, WalletBalancesByCoin,
+use unifi_sdk_primitives::{
+	types::{ChainName, ChainProtocol, StableCoin, WalletBalancesByChain, WalletBalancesByCoin},
+	utils::sanitize_address,
 };
 
 impl Sdk {
@@ -11,6 +12,10 @@ impl Sdk {
 		user_id: &str,
 		chain: ChainName,
 	) -> eyre::Result<String> {
+		if sanitize_address(user_id) {
+			return Ok(user_id.to_owned())
+		}
+
 		let handler = ApiHandler::GetUserWalletAddress;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
 		let url = format!("{}{}", self.api_base_url, path);
@@ -22,6 +27,11 @@ impl Sdk {
 		&self,
 		user_id: &str,
 	) -> eyre::Result<HashMap<ChainProtocol, String>> {
+		if sanitize_address(user_id) {
+			// WARN: only EVM protocol
+			return Ok(HashMap::from([(ChainProtocol::Evm, user_id.to_owned())]));
+		}
+
 		let handler = ApiHandler::GetUserWalletAddresses;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
 		let url = format!("{}{}", self.api_base_url, path);
@@ -35,14 +45,12 @@ impl Sdk {
 		user_id: &str,
 		chain: ChainName,
 		coin: StableCoin,
-		is_custodial: bool,
 	) -> eyre::Result<String> {
 		let handler = ApiHandler::GetOcChainCoinBalance;
 		let path = handler.fill_path_ordered(&[
 			user_id.to_owned(),
 			chain.to_string(),
 			coin.to_string(),
-			is_custodial.to_string(),
 		])?;
 		let url = format!("{}{}", self.api_base_url, path);
 		let resp = self.with_auth(self.client.get(url)).send().await;
@@ -55,14 +63,9 @@ impl Sdk {
 		&self,
 		user_id: &str,
 		chain: ChainName,
-		is_custodial: bool,
 	) -> eyre::Result<HashMap<StableCoin, String>> {
 		let handler = ApiHandler::GetOcChainAllCoinsBalances;
-		let path = handler.fill_path_ordered(&[
-			user_id.to_owned(),
-			chain.to_string(),
-			is_custodial.to_string(),
-		])?;
+		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
 		let url = format!("{}{}", self.api_base_url, path);
 		let resp = self.with_auth(self.client.get(url)).send().await;
 
@@ -77,14 +80,9 @@ impl Sdk {
 		&self,
 		user_id: &str,
 		chain: ChainName,
-		is_custodial: bool,
 	) -> eyre::Result<WalletBalancesByChain> {
 		let handler = ApiHandler::GetWalletBalancesByChain;
-		let path = handler.fill_path_ordered(&[
-			user_id.to_owned(),
-			chain.to_string(),
-			is_custodial.to_string(),
-		])?;
+		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
 		let url = format!("{}{}", self.api_base_url, path);
 		let resp = self.with_auth(self.client.get(url)).send().await;
 
