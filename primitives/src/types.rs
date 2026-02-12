@@ -505,16 +505,15 @@ pub struct OcPayReceipt {
 	pub user_id: String,
 	pub is_fee_incl: bool,
 	pub chain: ChainName,
-	pub coins: Vec<StableCoin>,
-	pub to_addresses: Vec<String>,
-	pub amounts: Vec<String>,
+	pub coin: StableCoin,
+	pub to_address: String,
+	pub amount: String,
 	pub memo: Memo,
 	pub est_fee: String,
 	pub act_fee: String,
 	pub tx_hash: String,
-	pub tx_hashes: Vec<String>,
-	/// Block numbers
-	pub block_nums: Vec<String>,
+	/// Block number
+	pub block_num: i64,
 	pub status: OcPayReceiptStatus,
 	pub start_ts_us: i64,
 	pub end_ts_us: i64,
@@ -528,15 +527,14 @@ impl Default for OcPayReceipt {
 			user_id: Default::default(),
 			is_fee_incl: Default::default(),
 			chain: Default::default(),
-			coins: Default::default(),
-			to_addresses: Default::default(),
-			amounts: Default::default(),
+			coin: Default::default(),
+			to_address: Default::default(),
+			amount: Default::default(),
 			memo: Default::default(),
-			est_fee: "0".to_owned(),
-			act_fee: "0".to_owned(),
+			est_fee: Self::default_est_fee(),
+			act_fee: Self::default_act_fee(),
 			tx_hash: Default::default(),
-			tx_hashes: Default::default(),
-			block_nums: Default::default(),
+			block_num: Default::default(),
 			status: Default::default(),
 			start_ts_us: Default::default(),
 			end_ts_us: Default::default(),
@@ -545,26 +543,35 @@ impl Default for OcPayReceipt {
 }
 
 impl OcPayReceipt {
+	pub fn default_est_fee() -> String {
+		"0".to_owned()
+	}
+	pub fn default_act_fee() -> String {
+		"0".to_owned()
+	}
 	/// This fn is used to hide the savings field in the Receipt UI.
 	///
 	/// `true` => legacy receipt
-	pub fn is_old(&self) -> bool {
-		self.est_fee.eq("0") && self.act_fee.eq("0")
+	pub fn is_legacy(&self) -> bool {
+		self.est_fee.eq(&Self::default_est_fee()) && self.act_fee.eq(&Self::default_act_fee())
 	}
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Default)]
 pub enum OcPayReceiptStatus {
-	/// Payment submitted to UniFi's sequencer.
+	/// This is marked when Payment submitted to UniFi's sequencer.
 	#[default]
 	Processing,
-	/// Payment submitted to UniFi's sequencer is found as invalid (insufficient balance, etc..).
+	/// Payment submitted to UniFi's sequencer is found as invalid (insufficient balance, etc..). \
+	/// NOTE: In case of NC op, this might happen. Checked via `scan_nc_op`.
 	Failed,
 	/// Payment submitted was sent to onchain i.e. added to a block & tx_hash generated.
 	Confirmed,
 	/// Completed payment is now finalized i.e. added to a block (with finalized tag now).
 	Finalized,
-	/// Completed payment is not added to canonical chain.
+	/// Completed payment is not added to canonical chain. \
+	/// Hence, payer needs to retry the payment. \
+	/// NOTE: Although chances of happening this is very low, but still considered here.
 	Reorged,
 }
 
@@ -592,6 +599,8 @@ pub enum Memo {
 	General,
 	SubscribeApi(ApiPlan, PaidPlanDuration),
 	FliqPay,
+	/// For Salary/Payroll, Vendor payments, ..
+	BulkPay,
 }
 
 impl From<Memo> for String {
@@ -602,6 +611,7 @@ impl From<Memo> for String {
 			SubscribeApi(plan, duration) =>
 				format!("SubscribeApi:{}:{}", plan.as_ref(), duration.as_ref()),
 			FliqPay => "FliqPay".to_string(),
+			BulkPay => "BulkPay".to_string(),
 		}
 	}
 }
@@ -616,6 +626,7 @@ impl FromStr for Memo {
 		match parts.as_slice() {
 			["General"] => Ok(General),
 			["FliqPay"] => Ok(FliqPay),
+			["BulkPay"] => Ok(BulkPay),
 			["SubscribeApi", plan_str, duration_str] => {
 				let plan =
 					ApiPlan::from_str(plan_str).map_err(|e| format!("Invalid ApiPlan: {}", e))?;

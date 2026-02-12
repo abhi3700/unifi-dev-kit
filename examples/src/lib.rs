@@ -75,42 +75,49 @@ pub fn ask_yes_no(question: &str) -> eyre::Result<bool> {
 }
 
 pub fn display_pay_receipt(receipt: OcPayReceipt) {
+	let OcPayReceipt {
+		id,
+		chain,
+		coin,
+		to_address,
+		amount,
+		memo,
+		est_fee,
+		act_fee,
+		tx_hash,
+		status,
+		start_ts_us,
+		end_ts_us,
+		..
+	} = receipt;
 	println!("{}", "----------------------------------------".dimmed());
-	println!("{} {}", "Receipt ID:".bright_blue().bold(), receipt.id);
-	println!("{} {}", "Chain:".bright_blue().bold(), receipt.chain);
+	println!("{} {}", "Receipt ID:".bright_blue().bold(), id);
+	println!("{} {}", "Chain:".bright_blue().bold(), chain);
 
 	// Show coins with amounts and addresses
-	for (idx, coin) in receipt.coins.iter().enumerate() {
-		let amt = receipt.amounts.get(idx).map(|s| s.as_str()).unwrap_or("");
-
-		let addr = receipt.to_addresses.get(idx).map(|s| s.as_str()).unwrap_or("");
-		println!("{} {} -> {} {}", "Coin:".cyan(), coin, "Amount:".cyan(), amt);
-		println!("{} {}", "To:".cyan(), addr);
-	}
+	println!("{} {} -> {} {}", "Coin:".cyan(), coin, "Amount:".cyan(), amount);
+	println!("{} {}", "To:".cyan(), to_address);
 
 	// Show memo only if not default or if meaningful
-	let memo_str: String = receipt.memo.into();
+	let memo_str: String = memo.into();
 	if !memo_str.is_empty() {
 		println!("{} {}", "Memo:".bright_yellow(), memo_str);
 	}
 
-	// Show primary tx_hash if present
-	if !receipt.tx_hash.trim().is_empty() {
-		println!("{} {}", "Tx Hash:".magenta().bold(), receipt.tx_hash);
+	if !tx_hash.trim().is_empty() {
+		println!("{} {}", "Tx Hash:".magenta().bold(), tx_hash);
 	}
 
-	// Show tx_hashes list if non empty
-	if !receipt.tx_hashes.is_empty() {
-		println!("{}", "Tx Hashes:".magenta().bold());
-		for h in receipt.tx_hashes {
-			if !h.trim().is_empty() {
-				println!("  {}", h);
-			}
-		}
+	if !est_fee.trim().is_empty() {
+		println!("{} {}", "Est. Fee".magenta().bold(), est_fee);
+	}
+
+	if !act_fee.trim().is_empty() {
+		println!("{} {}", "Act. Fee".magenta().bold(), act_fee);
 	}
 
 	// Status with color
-	let status = match receipt.status {
+	let status = match status {
 		unifi_sdk_primitives::types::OcPayReceiptStatus::Processing => "Processing".yellow().bold(),
 		unifi_sdk_primitives::types::OcPayReceiptStatus::Failed => "Failed".red().bold(),
 		unifi_sdk_primitives::types::OcPayReceiptStatus::Confirmed => "Confirmed".green().bold(),
@@ -122,13 +129,13 @@ pub fn display_pay_receipt(receipt: OcPayReceipt) {
 	println!("{} {}", "Status:".bright_blue().bold(), status);
 
 	// Time info
-	if receipt.start_ts_us > 0 && receipt.end_ts_us > 0 {
-		let dur_s = (receipt.end_ts_us - receipt.start_ts_us) as f64 / 1_000_000.0;
+	if start_ts_us > 0 && end_ts_us > 0 {
+		let dur_s = (end_ts_us - start_ts_us) as f64 / 1_000_000.0;
 		println!("{} {:.2} sec", "Duration:".bright_blue().bold(), dur_s);
-	} else if receipt.start_ts_us > 0 {
+	} else if start_ts_us > 0 {
 		// Convert microseconds to seconds and then to human readable datetime
 		let submitted =
-			std::time::UNIX_EPOCH + std::time::Duration::from_micros(receipt.start_ts_us as u64);
+			std::time::UNIX_EPOCH + std::time::Duration::from_micros(start_ts_us as u64);
 		let datetime: chrono::DateTime<chrono::Local> = submitted.into();
 		println!("{} {}", "Submitted:".bright_blue().bold(), datetime.format("%Y-%m-%d %H:%M:%S"));
 	}
