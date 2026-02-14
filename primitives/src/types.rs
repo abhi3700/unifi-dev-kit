@@ -549,6 +549,7 @@ impl OcPayReceipt {
 	pub fn default_act_fee() -> String {
 		"0".to_owned()
 	}
+
 	/// This fn is used to hide the savings field in the Receipt UI.
 	///
 	/// `true` => legacy receipt
