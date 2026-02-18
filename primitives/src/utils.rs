@@ -203,12 +203,15 @@ pub fn compute_est_fee_ncw(
 
 /// Get required allowance value (considering practical case).
 ///
-/// NOTE: Due to change in est. fees so that user doesn't have to approve min. amount (instead of
-/// `U256::MAX`) multiple times. So, add `10$` to it for safety.
+/// NOTE: If user opts for approving min. amount (instead of `U256::MAX`), then instead of exact
+/// `total_spend`, user is asked to approve `total_spend + $10`, so that due to change in network
+/// fee, thereby est. fee, user is not prompted to approve again. Here, it's presumed that est. fee
+/// won't change by $10, but may be upto $1.
 ///
 /// ## Usage
-/// - After payment page loads, bal & est. fees successfully loaded, then in case of NC, update
-///   required allowance on changing amount input. This required allowance is shown during approval.
+/// - After the payment page loads, bal & est. fees successfully loaded, then in case of NC, update
+///   required allowance on changing amount input. Hence, instead of exact `total_spend`, we ask for
+///   `total_spend + $10` during approval.
 ///
 /// ## Arguments
 /// - `amount`: entered amount
@@ -219,7 +222,7 @@ pub fn compute_est_fee_ncw(
 ///
 /// ## Returns
 /// in decimals E.g. "10.124" USDT
-pub fn req_allowance(
+pub fn update_req_allowance(
 	amount: &str,
 	coin: StableCoin,
 	allowance: &str,
@@ -231,15 +234,18 @@ pub fn req_allowance(
 	let est_fee_u256 = parse_human_fmt_to_u256(est_fee, coin_decimals, false)?;
 
 	let mut total_spend = if is_fee_incl { amount_u256 } else { amount_u256 + est_fee_u256 };
-	// NOTE: add safety val.
+	// NOTE: add $10 as safety val, so as to avoid repetitive approval prompt.
 	total_spend += U256::from(10_u128) * U256::from(10).pow(U256::from(coin_decimals));
 
-	// let allowance_u256 = U256::from_str(allowance).wrap_err("Failed to parse allowance")?;
 	let allowance_u256 = parse_human_fmt_to_u256(allowance, coin_decimals, false)?;
 	let req_allowance = if total_spend.gt(&allowance_u256) {
+		// Ask for approval of extra value only. Most trustless model where user is uncomfortable
+		// approving U256::MAX.
 		total_spend - allowance_u256
 	} else {
-		// also includes the case: `allowance == U256::MAX`
+		// Cases:
+		// - When `total_spend < approval amt`
+		// - When `allowance == U256::MAX`
 		U256::ZERO
 	};
 
@@ -368,21 +374,21 @@ mod tests {
 	fn req_allowance_tests() {
 		// Test with USDT token
 		assert_eq!(
-			req_allowance("1", StableCoin::USDT, "0", "0.112192", false).unwrap(),
+			update_req_allowance("1", StableCoin::USDT, "0", "0.112192", false).unwrap(),
 			"11.112192"
 		);
 		assert_eq!(
-			req_allowance("1", StableCoin::USDT, "0", "0.112192", true).unwrap(),
+			update_req_allowance("1", StableCoin::USDT, "0", "0.112192", true).unwrap(),
 			"11.000000"
 		);
 
 		// Test with DAI token
 		assert_eq!(
-			req_allowance("1", StableCoin::DAI, "0", "0.112192", false).unwrap(),
+			update_req_allowance("1", StableCoin::DAI, "0", "0.112192", false).unwrap(),
 			"11.112192000000000000"
 		);
 		assert_eq!(
-			req_allowance("1", StableCoin::DAI, "0", "0.112192", true).unwrap(),
+			update_req_allowance("1", StableCoin::DAI, "0", "0.112192", true).unwrap(),
 			"11.000000000000000000"
 		);
 	}
