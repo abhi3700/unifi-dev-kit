@@ -300,6 +300,10 @@ pub fn sanitize_and_parse_amount(amount: &str, coin: StableCoin) -> eyre::Result
 
 /// Validates the amount (with est. fee) against the user's balance.
 ///
+/// ## Arguments
+/// - amount: E.g. "1.02345".
+/// - ..
+///
 /// ## Notes
 /// - balance & est_fee, is_allowance_zero are fetched via fn `fetch_pre_ocp_balance_and_est_fee`.
 /// - In the FE as these are already fetched once & values shown in UI, we don't need to fetch again
@@ -323,7 +327,6 @@ pub fn validate_and_parse_amount(
 	let total_amount_u256 = if is_fee_incl {
 		amount_u256
 	} else {
-		println!("checked");
 		amount_u256.checked_add(est_fee_u256).ok_or_eyre(
 			"Calculation error: Failed to add amount and estimated fees — possible overflow",
 		)?
@@ -336,8 +339,12 @@ pub fn validate_and_parse_amount(
 
 /// Validate and parse amount without sanitization.
 ///
+/// ## Arguments
+/// - amount: U256 string i.e. use "102345" for "1.02345" USDT.
+/// - ..
+///
 /// ## Usage
-/// - FliQPay page.
+/// - FliQPay page where we separately sanitize the amount synchronously
 pub fn validate_and_parse_amount_wo_sanitize(
 	amount: &str,
 	coin: StableCoin,
