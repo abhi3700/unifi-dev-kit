@@ -237,11 +237,36 @@ pub fn update_req_allowance(
 	// NOTE: add $10 as safety val, so as to avoid repetitive approval prompt.
 	total_spend += U256::from(10_u128) * U256::from(10).pow(U256::from(coin_decimals));
 
-	let allowance_u256 = parse_human_fmt_to_u256(allowance, coin_decimals, false)?;
-	let req_allowance = if total_spend.gt(&allowance_u256) {
-		// Ask for approval of extra value only. Most trustless model where user is uncomfortable
-		// approving U256::MAX.
-		total_spend - allowance_u256
+	let allowance = U256::from_str(allowance).wrap_err("Failed to parse allowance")?;
+	let req_allowance = if total_spend.gt(&allowance) {
+		// We intentionally DO NOT return `total_spend - allowance` here.
+		//
+		// Why?
+		// ERC20 `approve(spender, amount)` overwrites the existing allowance.
+		// It does NOT increase it.
+		//
+		// If we returned only `(total_spend - allowance)` and passed that to
+		// `approve()`, the new allowance would be set to only the delta value,
+		// which would actually REDUCE the effective allowance instead of making
+		// it equal to `total_spend`.
+		//
+		// Example:
+		// - Current allowance = 5
+		// - total_spend = 20
+		// - total_spend - allowance = 15
+		//
+		// Calling `approve(spender, 15)` would set allowance to 15,
+		// not 20 — which is still insufficient.
+		//
+		// Therefore, we must approve the full `total_spend` (plus safety buffer),
+		// not just the difference.
+		//
+		// NOTE:
+		// If using `increaseAllowance()` instead of `approve()`,
+		// then returning `(total_spend - allowance)` would be correct.
+		// But since Permit2 / ERC20 approve overwrites,
+		// we return the full target allowance.
+		total_spend
 	} else {
 		// Cases:
 		// - When `total_spend < approval amt`
