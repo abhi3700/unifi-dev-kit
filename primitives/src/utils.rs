@@ -170,9 +170,12 @@ pub fn compute_est_fee_ncw(
 			(approve + permit_transfer_from, target_amt - allowance)
 		};
 
+		// NOTE: Add platform_fee on top of network fee.
+		let platform_payment_fee_multiplier = 1.15;
 		// fee = (gas_usage * gas_price * gas_token_price) / (coin_price * 10^decimals)
 		let est_gas_fee = (est_gas_usage * gas_price) as f64;
-		let est_fee_f64 = est_gas_fee * gas_token_price / price_denom;
+		let est_fee_f64 =
+			est_gas_fee * gas_token_price * platform_payment_fee_multiplier / price_denom;
 		let est_fee_u256 = parse_human_fmt_to_u256(&est_fee_f64.to_string(), coin_decimals, false)?;
 
 		Ok((est_fee_u256, required_allowance_val))
