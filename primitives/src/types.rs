@@ -600,6 +600,7 @@ pub enum Memo {
 	General,
 	SubscribeApi(ApiPlan, PaidPlanDuration),
 	FliqPay,
+	FliqPayMerchant,
 	/// For Salary/Payroll, Vendor payments, ..
 	BulkPay,
 }
@@ -612,6 +613,7 @@ impl From<Memo> for String {
 			SubscribeApi(plan, duration) =>
 				format!("SubscribeApi:{}:{}", plan.as_ref(), duration.as_ref()),
 			FliqPay => "FliqPay".to_string(),
+			FliqPayMerchant => "FliqPayMerchant".to_string(),
 			BulkPay => "BulkPay".to_string(),
 		}
 	}
@@ -627,6 +629,7 @@ impl FromStr for Memo {
 		match parts.as_slice() {
 			["General"] => Ok(General),
 			["FliqPay"] => Ok(FliqPay),
+			["FliqPayMerchant"] => Ok(FliqPayMerchant),
 			["BulkPay"] => Ok(BulkPay),
 			["SubscribeApi", plan_str, duration_str] => {
 				let plan =
