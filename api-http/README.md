@@ -91,7 +91,7 @@ File path:
 {
     "rest-client.environmentVariables": {
         "prod": {
-            "base_url": "https://unifi-api-jlq9.onrender.com",
+            "base_url": "https://unifi-api-4a5e.onrender.com",
             "api_key": "YOUR_API_KEY"
         }
     }
