@@ -397,6 +397,16 @@ pub fn validate_and_parse_amount_wo_sanitize(
 	Ok(())
 }
 
+/// Calculate the no. of worker threads per CPU
+pub fn calculate_worker_threads() -> usize {
+	let cpu_cores = num_cpus::get(); // Get available CPU cores
+	if cpu_cores == 1 {
+		4 // Minimum 4 threads for async tasks
+	} else {
+		cpu_cores * 8 // 8x multiplier for high concurrency
+	}
+}
+
 /// Test
 /// ```sh
 /// RUSTFLAGS="-Awarnings" cargo t -p unifi-sdk-primitives -F utils -- utils::tests --show-output
