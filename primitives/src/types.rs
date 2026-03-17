@@ -583,7 +583,7 @@ impl From<OcPayReceiptStatus> for Bson {
 	}
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub enum Memo {
 	#[default]
 	General,
@@ -592,13 +592,23 @@ pub enum Memo {
 	FliqPayMerchant,
 	/// For Salary/Payroll, Vendor payments, ..
 	BulkPay,
+	Custom(String),
+}
+
+impl Memo {
+	/// Max characters stored for a custom memo purpose to avoid receipt bloating.
+	pub const CUSTOM_PURPOSE_MAX_LEN: usize = 48;
+
+	fn normalize_custom_purpose(purpose: &str) -> String {
+		purpose.trim().chars().take(Self::CUSTOM_PURPOSE_MAX_LEN).collect()
+	}
 }
 
 impl Display for Memo {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		// Reuse canonical serialization logic from `From<Memo> for String` to ensure consistent
 		// formatting (e.g., SubscribeApi:Starter:Month)
-		let value: String = (*self).into();
+		let value: String = self.clone().into();
 		write!(f, "{}", value)
 	}
 }
@@ -613,6 +623,7 @@ impl From<Memo> for String {
 			FliqPay => "FliqPay".to_string(),
 			FliqPayMerchant => "FliqPayMerchant".to_string(),
 			BulkPay => "BulkPay".to_string(),
+			Custom(purpose) => Memo::normalize_custom_purpose(&purpose),
 		}
 	}
 }
@@ -636,6 +647,8 @@ impl FromStr for Memo {
 					.map_err(|e| format!("Invalid PaidPlanDuration: {}", e))?;
 				Ok(SubscribeApi(plan, duration))
 			},
+			[custom_purpose] if !custom_purpose.trim().is_empty() =>
+				Ok(Custom(Memo::normalize_custom_purpose(custom_purpose))),
 			_ => Err(format!("Invalid Memo string: {}", s)),
 		}
 	}
