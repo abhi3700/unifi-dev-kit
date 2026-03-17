@@ -101,31 +101,30 @@ impl Display for ChainName {
 	}
 }
 
-/// Used because of use in dioxus route params.
 impl FromStr for ChainName {
 	type Err = String;
 
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		use ChainName::*;
+	fn from_str(chain: &str) -> Result<Self, Self::Err> {
+		use ChainName as C;
 
-		match s.to_lowercase().as_str() {
-			"ethereum" => Ok(Ethereum),
-			"polygon" => Ok(Polygon),
-			"sepolia" => Ok(Sepolia),
-			"anvil" => Ok(Anvil),
-			_ => Err(format!("Invalid chain name: {}", s)),
+		match chain.to_lowercase().as_str() {
+			"ethereum" => Ok(C::Ethereum),
+			"polygon" => Ok(C::Polygon),
+			"sepolia" => Ok(C::Sepolia),
+			"anvil" => Ok(C::Anvil),
+			_ => Err(format!("Invalid chain name: {}", chain)),
 		}
 	}
 }
 
 impl AsRef<str> for ChainName {
 	fn as_ref(&self) -> &str {
-		use ChainName::*;
+		use ChainName as C;
 		match self {
-			Ethereum => "Ethereum",
-			Polygon => "Polygon",
-			Sepolia => "Sepolia",
-			Anvil => "Anvil",
+			C::Ethereum => "Ethereum",
+			C::Polygon => "Polygon",
+			C::Sepolia => "Sepolia",
+			C::Anvil => "Anvil",
 		}
 	}
 }
@@ -199,12 +198,12 @@ impl<'de> Deserialize<'de> for StableCoin {
 	where
 		D: serde::Deserializer<'de>,
 	{
-		use StableCoin::*;
+		use StableCoin as S;
 		let s = String::deserialize(deserializer)?;
 		match s.as_str() {
-			"USDT" => Ok(USDT),
-			"USDC" => Ok(USDC),
-			"DAI" => Ok(DAI),
+			"USDT" => Ok(S::USDT),
+			"USDC" => Ok(S::USDC),
+			"DAI" => Ok(S::DAI),
 			_ => Err(serde::de::Error::unknown_variant(&s, &["USDT", "USDC", "DAI"])),
 		}
 	}
@@ -272,16 +271,6 @@ impl StableCoin {
 			S::USDT => 6,
 			S::USDC => 6,
 			S::DAI => 18,
-		}
-	}
-
-	pub fn from_strr(stablecoin: &str) -> eyre::Result<Self> {
-		use StableCoin as S;
-		match stablecoin.to_uppercase().as_str() {
-			"USDT" => Ok(S::USDT),
-			"USDC" => Ok(S::USDC),
-			"DAI" => Ok(S::DAI),
-			_ => Err(eyre::eyre!(format!("Invalid stablecoin: {}", stablecoin))),
 		}
 	}
 }
