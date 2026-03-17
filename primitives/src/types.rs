@@ -605,6 +605,15 @@ pub enum Memo {
 	BulkPay,
 }
 
+impl Display for Memo {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		// Reuse canonical serialization logic from `From<Memo> for String` to ensure consistent
+		// formatting (e.g., SubscribeApi:Starter:Month)
+		let value: String = (*self).into();
+		write!(f, "{}", value)
+	}
+}
+
 impl From<Memo> for String {
 	fn from(memo: Memo) -> Self {
 		use Memo::*;
