@@ -137,6 +137,16 @@ pub struct GasEstimate {
 }
 
 impl ChainName {
+	pub fn all(mode: Mode) -> &'static [ChainName] {
+		use ChainName as C;
+
+		if matches!(mode, Mode::Test) {
+			&[C::Ethereum, C::Polygon, C::Sepolia, C::Anvil]
+		} else {
+			&[C::Ethereum, C::Polygon, C::Sepolia]
+		}
+	}
+
 	/// Get the gas limit (max. feasible for prediction so that the actual gas consumed is lower
 	/// than the predicted) of all the used functions (in onchain payment) for a given
 	/// coin. Although all the ERC20 tokens have same gas usage irrespective of chains. But, just
