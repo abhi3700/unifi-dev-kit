@@ -3,6 +3,7 @@ use bson::{
 	Bson::{self, Document as BsonDocument},
 	doc,
 };
+use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, str::FromStr};
 
@@ -73,7 +74,20 @@ impl ChainProtocol {
 }
 
 // More would be added later.
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
+#[derive(
+	Archive,
+	RkyvSerialize,
+	RkyvDeserialize,
+	Serialize,
+	Deserialize,
+	Debug,
+	PartialEq,
+	Eq,
+	Hash,
+	Clone,
+	Copy,
+	Default,
+)]
 pub enum ChainName {
 	#[default]
 	Ethereum,
@@ -189,7 +203,19 @@ impl ChainName {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Copy, Default)]
+#[derive(
+	Archive,
+	RkyvSerialize,
+	RkyvDeserialize,
+	Debug,
+	Clone,
+	PartialEq,
+	Eq,
+	Hash,
+	Serialize,
+	Copy,
+	Default,
+)]
 pub enum StableCoin {
 	#[default]
 	USDT,
@@ -593,7 +619,17 @@ impl From<OcPayReceiptStatus> for Bson {
 	}
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
+#[derive(
+	Archive,
+	RkyvSerialize,
+	RkyvDeserialize,
+	Debug,
+	Serialize,
+	Deserialize,
+	Default,
+	Clone,
+	PartialEq,
+)]
 pub enum Memo {
 	#[default]
 	General,
@@ -664,7 +700,18 @@ impl FromStr for Memo {
 	}
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, Clone, Copy, PartialEq)]
+#[derive(
+	Archive,
+	RkyvSerialize,
+	RkyvDeserialize,
+	Debug,
+	Serialize,
+	Deserialize,
+	Default,
+	Clone,
+	Copy,
+	PartialEq,
+)]
 pub enum ApiPlan {
 	#[default]
 	Free,
@@ -710,7 +757,20 @@ impl AsRef<str> for ApiPlan {
 	}
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash, Copy, Default)]
+#[derive(
+	Archive,
+	RkyvSerialize,
+	RkyvDeserialize,
+	Serialize,
+	Deserialize,
+	Debug,
+	Clone,
+	Eq,
+	PartialEq,
+	Hash,
+	Copy,
+	Default,
+)]
 pub enum PaidPlanDuration {
 	#[default]
 	Month,
@@ -811,7 +871,17 @@ pub struct PreOcpValuesNcwParams {
 	pub coin_price: f64,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(
+	Archive,
+	RkyvSerialize,
+	RkyvDeserialize,
+	Debug,
+	Default,
+	Serialize,
+	Deserialize,
+	Clone,
+	PartialEq,
+)]
 pub struct PayOnchainPayload {
 	pub chain: ChainName,
 	pub coin: StableCoin,
