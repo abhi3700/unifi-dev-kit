@@ -619,6 +619,20 @@ impl From<OcPayReceiptStatus> for Bson {
 	}
 }
 
+impl OcPayReceiptStatus {
+	pub fn is_processing(&self) -> bool {
+		self.eq(&Self::Processing)
+	}
+
+	pub fn is_confirmed(&self) -> bool {
+		self.eq(&Self::Confirmed)
+	}
+
+	pub fn is_finalized(&self) -> bool {
+		self.eq(&Self::Finalized)
+	}
+}
+
 #[derive(
 	Archive,
 	RkyvSerialize,
