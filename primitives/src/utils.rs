@@ -407,6 +407,11 @@ pub fn calculate_worker_threads() -> usize {
 	}
 }
 
+pub fn now_timestamp_secs() -> u64 {
+	use std::time::{SystemTime, UNIX_EPOCH};
+	SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
+}
+
 /// Test
 /// ```sh
 /// RUSTFLAGS="-Awarnings" cargo t -p unifi-sdk-primitives -F utils -- utils::tests --show-output

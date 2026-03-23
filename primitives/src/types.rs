@@ -1,4 +1,5 @@
-use alloy_primitives::{Address, address};
+use crate::utils::{now_timestamp_secs, sanitize_and_parse_amount};
+use alloy_primitives::{Address, U256, address};
 use bson::{
 	Bson::{self, Document as BsonDocument},
 	doc,
@@ -86,6 +87,8 @@ impl ChainProtocol {
 	Hash,
 	Clone,
 	Copy,
+	PartialOrd,
+	Ord,
 	Default,
 )]
 pub enum ChainName {
@@ -214,6 +217,8 @@ impl ChainName {
 	Hash,
 	Serialize,
 	Copy,
+	PartialOrd,
+	Ord,
 	Default,
 )]
 pub enum StableCoin {
@@ -908,4 +913,82 @@ impl Display for PayOnchainPayload {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{:?}", self)
 	}
+}
+
+impl PayOnchainPayload {
+	/// sanitize address & amount
+	///
+	/// ## Notes
+	/// - Here, individual santization applied for better error handling.
+	///
+	/// ## Returns
+	/// - is_sanitized_full ✅
+	/// - to_addr
+	/// - amount
+	pub fn is_sanitized(&self) -> (bool, Option<Address>, Option<U256>) {
+		let to_addr = self.to_address.parse::<Address>().ok();
+		let is_san_addr = to_addr.is_some();
+		let parsed_amount = sanitize_and_parse_amount(&self.amount, self.coin).ok();
+		let is_san_amt = parsed_amount.is_some();
+
+		(is_san_addr && is_san_amt, to_addr, parsed_amount)
+	}
+}
+
+/// Currently, it's stored forever if repeat -> true, else when execute_at is done, we delete.
+///
+/// In future, we might store this. Then additional args:
+/// - `is_active`
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ScheduledPayOnchainPayload {
+	// /// Sender's user_id
+	// pub user_id: String,
+	pub payload: PayOnchainPayload,
+	/// Scheduled timestamp in secs.
+	pub execute_at: i64,
+	/// If `None`, then delete after `execute_at` elapsed during `scheduled_payments_handler` fn.
+	pub repeat: Option<PaymentRecurrence>,
+}
+
+impl Display for ScheduledPayOnchainPayload {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{:?}", self)
+	}
+}
+
+impl ScheduledPayOnchainPayload {
+	/// set 1 min as min. scheduled time. \
+	/// Set to 55 bcoz due to time in API server receiving req. from client.
+	pub const MIN_SCHEDULED_DURATION: i64 = 55;
+	pub const MAX_SCHEDULED_DURATION: i64 = 60 * 60 * 24 * 365; // 1 year
+
+	/// sanitize s_payload & execute_time
+	///
+	/// ## Notes
+	/// - Here, individual santization applied for better error handling.
+	///
+	/// ## Returns
+	/// - is_sanitized_full ✅
+	/// - address
+	///   - if `addr.is_some()` -> sanitized.
+	/// - amount
+	///   - if `amount.is_some()` -> sanitized.
+	/// - execute
+	pub fn is_sanitized(&self) -> (bool, Option<Address>, Option<U256>, bool) {
+		let (is_san_payload, to_addr, amount) = self.payload.is_sanitized();
+
+		let now = now_timestamp_secs() as i64;
+		let is_san_execute = self.execute_at > now + Self::MIN_SCHEDULED_DURATION &&
+			self.execute_at < now + Self::MAX_SCHEDULED_DURATION;
+
+		(is_san_payload && is_san_execute, to_addr, amount, is_san_execute)
+	}
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum PaymentRecurrence {
+	Daily,
+	Weekly,
+	Monthly,
+	Custom(i64),
 }
