@@ -1,5 +1,8 @@
+#[cfg(feature = "utils")]
 use crate::utils::{now_timestamp_secs, sanitize_and_parse_amount};
-use alloy_primitives::{Address, U256, address};
+#[cfg(feature = "utils")]
+use alloy_primitives::U256;
+use alloy_primitives::{Address, address};
 use bson::{
 	Bson::{self, Document as BsonDocument},
 	doc,
@@ -925,6 +928,7 @@ impl PayOnchainPayload {
 	/// - is_sanitized_full ✅
 	/// - to_addr
 	/// - amount
+	#[cfg(feature = "utils")]
 	pub fn is_sanitized(&self) -> (bool, Option<Address>, Option<U256>) {
 		let to_addr = self.to_address.parse::<Address>().ok();
 		let is_san_addr = to_addr.is_some();
@@ -974,6 +978,7 @@ impl ScheduledPayOnchainPayload {
 	/// - amount
 	///   - if `amount.is_some()` -> sanitized.
 	/// - execute
+	#[cfg(feature = "utils")]
 	pub fn is_sanitized(&self) -> (bool, Option<Address>, Option<U256>, bool) {
 		let (is_san_payload, to_addr, amount) = self.payload.is_sanitized();
 
@@ -991,4 +996,70 @@ pub enum PaymentRecurrence {
 	Weekly,
 	Monthly,
 	Custom(i64),
+}
+
+/* Platform */
+
+/// ## Usage
+/// - Only for logged-in devices
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy)]
+pub enum Platform {
+	TgBot,
+	Web,
+	CliMac,
+	CliLinux,
+	CliWindows,
+	MacDesktop,
+	LinuxDesktop,
+	WindowsDesktop,
+}
+
+impl Display for Platform {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{:?}", self)
+	}
+}
+
+impl From<Platform> for String {
+	fn from(val: Platform) -> Self {
+		val.to_string()
+	}
+}
+
+impl Platform {
+	pub const fn all() -> &'static [Platform] {
+		use Platform as P;
+		&[
+			P::TgBot,
+			P::Web,
+			P::CliMac,
+			P::CliLinux,
+			P::CliWindows,
+			P::MacDesktop,
+			P::LinuxDesktop,
+			P::WindowsDesktop,
+		]
+	}
+
+	pub fn as_str(&self) -> &'static str {
+		use Platform as P;
+		match self {
+			P::TgBot => "TgBot",
+			P::Web => "Web",
+			P::CliMac => "CliMac",
+			P::CliLinux => "CliLinux",
+			P::CliWindows => "CliWindows",
+			P::MacDesktop => "MacDesktop",
+			P::LinuxDesktop => "LinuxDesktop",
+			P::WindowsDesktop => "WindowsDesktop",
+		}
+	}
+}
+
+/// this is
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NcJwtAuthPayload {
+	pub message: String,
+	pub signature: String,
+	pub platform: Platform,
 }

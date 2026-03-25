@@ -6,15 +6,22 @@ edition = "2024"
 
 [dependencies]
 alloy-contract = { version = "1.4.1"}
-alloy-primitives = { version = "1.4.1", optional = true}
-alloy-sol-types = { version = "1.4.1", features = ["eip712-serde", "json"]}
+alloy-primitives = { version = "1.4.1"}
+alloy-sol-types = { version = "1.4.1", features = ["eip712-serde", "json"], optional = true}
 bson = { version = "2.14.0", default-features = false}
 eyre = "0.6.12"
+hex = {version = "0.4.3", optional = true}
+k256 = { version = "0.13.4", features = ["ecdsa", "pkcs8"], optional = true}
 num_cpus = { version = "1.16", optional = true }
 rkyv = "0.8.15"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 thiserror = "2.0.12"
 
+[dev-dependencies]
+base64 = "0.22.1"
+
 [features]
-utils = ["dep:alloy-primitives", "dep:num_cpus"]
+utils = ["dep:num_cpus"]
+evm = ["dep:alloy-sol-types", "dep:k256", "dep:hex"]
+permit2 = ["dep:alloy-sol-types"]
