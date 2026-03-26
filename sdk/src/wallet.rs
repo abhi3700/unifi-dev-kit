@@ -19,7 +19,7 @@ impl Sdk {
 		let handler = ApiHandler::GetUserWalletAddress;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.get(url)).send().await;
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 		Sdk::process_response::<String>(resp).await
 	}
 
@@ -35,7 +35,7 @@ impl Sdk {
 		let handler = ApiHandler::GetUserWalletAddresses;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.get(url)).send().await;
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 		Sdk::process_response::<HashMap<ChainProtocol, String>>(resp).await
 	}
 
@@ -53,7 +53,7 @@ impl Sdk {
 			coin.to_string(),
 		])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.get(url)).send().await;
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<String>(resp).await
 	}
@@ -67,7 +67,7 @@ impl Sdk {
 		let handler = ApiHandler::GetOcChainAllCoinsBalances;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.get(url)).send().await;
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<HashMap<StableCoin, String>>(resp).await
 	}
@@ -84,7 +84,7 @@ impl Sdk {
 		let handler = ApiHandler::GetWalletBalancesByChain;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.get(url)).send().await;
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<WalletBalancesByChain>(resp).await
 	}
@@ -101,7 +101,7 @@ impl Sdk {
 		let handler = ApiHandler::GetWalletBalancesByCoin;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), coin.to_string()])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.get(url)).send().await;
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<WalletBalancesByCoin>(resp).await
 	}

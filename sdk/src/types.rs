@@ -8,6 +8,9 @@ pub enum ApiHandler {
 	HealthCheck,
 	Healthz,
 
+	/* Auth */
+	GenerateJwtForNc,
+
 	/* Profile */
 	SetUserProfile,
 	GetUserProfile,
@@ -40,14 +43,16 @@ pub enum ApiHandler {
 	GetWalletBalancesByCoin,
 }
 
-// #[cfg(any(feature = "types"))]
 impl ApiHandler {
-	pub fn path(&self) -> &'static str {
+	pub(crate) fn path(&self) -> &'static str {
 		use ApiHandler as AH;
 		match self {
 			/* Health */
 			AH::Healthz => "/healthz",
 			AH::HealthCheck => "/health",
+
+			/* Auth */
+			AH::GenerateJwtForNc => "/auth/generate_jwt/{address}",
 
 			/* Profile */
 			AH::SetUserProfile | AH::GetUserProfile => "/profile/{user_id}",
@@ -92,7 +97,7 @@ impl ApiHandler {
 	///
 	/// # Returns
 	/// A new path string with placeholders replaced
-	pub fn fill_path_ordered(&self, params: &[String]) -> eyre::Result<String> {
+	pub(crate) fn fill_path_ordered(&self, params: &[String]) -> eyre::Result<String> {
 		let template = self.path();
 		let mut filled_path = String::new();
 		let mut i = 0;
@@ -125,5 +130,13 @@ impl ApiHandler {
 		// Push remaining part
 		filled_path.push_str(&template[i..]);
 		Ok(filled_path)
+	}
+
+	pub(crate) fn is_apikey_required(&self) -> bool {
+		use ApiHandler as AH;
+		match self {
+			AH::GenerateJwtForNc => false,
+			_ => true,
+		}
 	}
 }

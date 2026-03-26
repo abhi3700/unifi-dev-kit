@@ -4,7 +4,7 @@ use thiserror::Error as ThisError;
 #[derive(ThisError, Debug)]
 pub enum OmniPayError {
 	#[error(
-		"API Server is Offline. \nPlease retry later or contact support if the problem persists."
+		"UniFi's API Server is Offline. \nPlease retry later or contact support if the problem persists."
 	)]
 	RequestToAPIServerFailed,
 	#[error("Not enough params provided to fill all placeholders.")]

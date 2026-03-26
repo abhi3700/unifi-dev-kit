@@ -19,7 +19,7 @@ impl Sdk {
 			coin.to_string(),
 		])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.get(url)).send().await;
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<String>(resp).await
 	}
@@ -39,7 +39,7 @@ impl Sdk {
 			coin.to_string(),
 		])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.get(url)).send().await;
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<String>(resp).await
 	}
@@ -59,7 +59,7 @@ impl Sdk {
 			coin.to_string(),
 		])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.get(url)).send().await;
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<PreOcpValues>(resp).await
 	}
@@ -78,7 +78,7 @@ impl Sdk {
 			chain.to_string(),
 		])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.post(url)).send().await;
+		let resp = self.with_auth(handler, self.client.post(url)).send().await;
 
 		Sdk::process_response::<()>(resp).await
 	}
@@ -93,7 +93,7 @@ impl Sdk {
 		let handler = ApiHandler::PayOnchain;
 		let path = handler.fill_path_ordered(&[user_id.to_string(), is_fee_incl.to_string()])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.post(url)).json(&payload).send().await;
+		let resp = self.with_auth(handler, self.client.post(url)).json(&payload).send().await;
 
 		Sdk::process_response::<String>(resp).await
 	}
@@ -114,7 +114,7 @@ impl Sdk {
 			amount,
 		])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.get(url)).send().await;
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<()>(resp).await
 	}
@@ -124,7 +124,7 @@ impl Sdk {
 		let handler = ApiHandler::GetOcpReceipt;
 		let path = handler.fill_path_ordered(&[receipt_id.to_owned()])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(self.client.get(url)).send().await;
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<OcPayReceipt>(resp).await
 	}
@@ -168,7 +168,7 @@ impl Sdk {
 			}
 		}
 
-		let resp = self.with_auth(self.client.get(url)).send().await;
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<OcPayHistory>(resp).await
 	}

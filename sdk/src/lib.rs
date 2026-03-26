@@ -1,7 +1,9 @@
+use crate::types::ApiHandler;
 use errors::OmniPayError;
 use reqwest::{Client as reqwestClient, Error as reqwestError, Response as reqwestResponse};
 use unifi_sdk_primitives::ApiResponse;
 
+pub mod auth;
 pub mod errors;
 pub mod health;
 pub mod pay;
@@ -33,9 +35,9 @@ macro_rules! http_error_message {
 
 #[derive(Clone)]
 pub struct Sdk {
-	pub client: reqwestClient,
-	pub api_base_url: String,
-	pub api_key: String,
+	pub(crate) client: reqwestClient,
+	pub(crate) api_base_url: String,
+	pub(crate) api_key: String,
 }
 
 impl Sdk {
@@ -47,7 +49,14 @@ impl Sdk {
 		}
 	}
 
-	pub(crate) fn with_auth(&self, req: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+	pub(crate) fn with_auth(
+		&self,
+		handler: ApiHandler,
+		req: reqwest::RequestBuilder,
+	) -> reqwest::RequestBuilder {
+		if !handler.is_apikey_required() {
+			return req
+		}
 		req.header("Authorization", format!("Bearer {}", self.api_key))
 	}
 
