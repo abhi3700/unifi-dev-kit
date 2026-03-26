@@ -7,6 +7,8 @@ pub enum OmniPayError {
 		"UniFi's API Server is Offline. \nPlease retry later or contact support if the problem persists."
 	)]
 	RequestToAPIServerFailed,
+	#[error("Invalid JWT. \nPlease signup/login first.")]
+	InvalidJwt,
 	#[error("Not enough params provided to fill all placeholders.")]
 	LessParamsForApiPath,
 	#[error("Extra params provided to fill all placeholders.")]

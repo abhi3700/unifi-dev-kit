@@ -8,6 +8,9 @@ pub enum ApiHandler {
 	HealthCheck,
 	Healthz,
 
+	/* API Key for User */
+	GenerateApiKey,
+
 	/* Auth */
 	GenerateJwtForNc,
 
@@ -50,6 +53,9 @@ impl ApiHandler {
 			/* Health */
 			AH::Healthz => "/healthz",
 			AH::HealthCheck => "/health",
+
+			/* API Key for User */
+			AH::GenerateApiKey => "/api_key/generate/{user_id}/{name}",
 
 			/* Auth */
 			AH::GenerateJwtForNc => "/auth/generate_jwt/{address}",

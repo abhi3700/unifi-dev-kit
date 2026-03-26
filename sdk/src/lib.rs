@@ -3,6 +3,7 @@ use errors::OmniPayError;
 use reqwest::{Client as reqwestClient, Error as reqwestError, Response as reqwestResponse};
 use unifi_sdk_primitives::ApiResponse;
 
+pub mod api;
 pub mod auth;
 pub mod errors;
 pub mod health;

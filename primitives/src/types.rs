@@ -1056,6 +1056,24 @@ impl Platform {
 	}
 }
 
+impl FromStr for Platform {
+	type Err = String;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().as_str() {
+			"tgbot" => Ok(Platform::TgBot),
+			"web" => Ok(Platform::Web),
+			"climac" => Ok(Platform::CliMac),
+			"clilinux" => Ok(Platform::CliLinux),
+			"cliwindows" => Ok(Platform::CliWindows),
+			"macdesktop" => Ok(Platform::MacDesktop),
+			"linuxdesktop" => Ok(Platform::LinuxDesktop),
+			"windowsdesktop" => Ok(Platform::WindowsDesktop),
+			_ => Err("Invalid platform".to_string()),
+		}
+	}
+}
+
 /// this is
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NcJwtAuthPayload {
