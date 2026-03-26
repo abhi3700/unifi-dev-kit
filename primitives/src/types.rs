@@ -1,3 +1,4 @@
+use crate::errors::UfiError;
 #[cfg(feature = "utils")]
 use crate::utils::{now_timestamp_secs, sanitize_and_parse_amount};
 #[cfg(feature = "utils")]
@@ -779,6 +780,38 @@ impl AsRef<str> for ApiPlan {
 	}
 }
 
+impl ApiPlan {
+	fn is_free(&self) -> bool {
+		self.eq(&ApiPlan::Free)
+	}
+
+	/// Returns the total credits quota for the selected API plan for duration.
+	///
+	/// This value represents the maximum credits allocated for a user
+	/// based on their plan. The `credits_left` field in `UserDocument`
+	/// will be decremented from this total as API usage occurs.
+	pub fn credit_quota(&self, duration: PaidPlanDuration) -> i64 {
+		use ApiPlan as A;
+		use PaidPlanDuration as D;
+
+		// TODO: decide these no.s
+		let monthly_quota = match self {
+			A::Free => 100_000,
+			A::Starter => 1_000_000,
+			A::Growth => 20_000_000,
+			A::Scale => 50_000_000,
+			A::Enterprise => 700_000_000,
+		};
+
+		match duration {
+			D::Month => monthly_quota,
+			D::Quarter => monthly_quota * 4,
+			D::HalfYear => monthly_quota * 6,
+			D::Year => monthly_quota * 12,
+		}
+	}
+}
+
 #[derive(
 	Archive,
 	RkyvSerialize,
@@ -830,6 +863,20 @@ impl FromStr for PaidPlanDuration {
 			"halfyear" => Ok(P::HalfYear),
 			"year" => Ok(P::Year),
 			_ => Err(format!("Invalid PaidPlanDuration: {}", s)),
+		}
+	}
+}
+
+impl PaidPlanDuration {
+	pub fn to_seconds(&self) -> i64 {
+		let month_in_secs = 30 * 86_400;
+
+		use PaidPlanDuration as P;
+		match self {
+			P::Month => month_in_secs,
+			P::Quarter => 3 * month_in_secs,
+			P::HalfYear => 6 * month_in_secs,
+			P::Year => 12 * month_in_secs,
 		}
 	}
 }
@@ -1080,4 +1127,83 @@ pub struct NcJwtAuthPayload {
 	pub message: String,
 	pub signature: String,
 	pub platform: Platform,
+}
+
+/// API
+/// - Keys
+/// - Metadata
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+pub struct Api {
+	pub metadata: ApiMetadata,
+	pub keys: Vec<ApiKey>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct ApiMetadata {
+	pub plan: ApiPlan,
+	pub credits: i64,
+	/// When the plan purchased or renewed, the expiry timestamp is set. For instance, plan is
+	/// for a year. Then, expiry timestamp is set accordingly. By default, set for month for Free
+	/// plan.
+	pub expiry_at: i64,
+}
+
+impl Default for ApiMetadata {
+	/// For FREE plan as default, we set to 1 month as expiry.
+	fn default() -> Self {
+		let plan = ApiPlan::Free;
+		let duration = PaidPlanDuration::Month;
+		Self {
+			plan,
+			credits: plan.credit_quota(duration),
+			expiry_at: now_timestamp_secs() as i64 + duration.to_seconds(),
+		}
+	}
+}
+
+impl ApiMetadata {
+	pub fn free() -> Self {
+		Self::default()
+	}
+
+	/// Returns Ok(()) if the user is eligible to purchase a new API plan.
+	///
+	/// Eligibility:
+	/// - current plan is free, or
+	/// - current plan expired, or
+	/// - credits are zero
+	///
+	/// ## Example
+	/// ```rust,ignore
+	/// let api_metadata = self.get_api_metadata(user_id).await?;
+	/// api_metadata.is_eligible_for_purchase()?;
+	/// ```
+	pub fn is_eligible_for_purchase(&self) -> eyre::Result<()> {
+		eyre::ensure!(
+			self.plan.is_free() ||
+				(now_timestamp_secs() as i64).ge(&self.expiry_at) ||
+				self.credits.eq(&0),
+			UfiError::InvalidCurrentPlanForApiPurchase
+		);
+		Ok(())
+	}
+}
+
+/* API Key */
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
+pub struct ApiKey {
+	pub name: String,
+	pub value: String,
+	pub created_at: i64,
+}
+
+impl From<ApiKey> for Bson {
+	fn from(api_key: ApiKey) -> Self {
+		BsonDocument(doc! {
+			"name": api_key.name,
+			"value": api_key.value,
+			"created_at": api_key.created_at,
+		})
+	}
 }

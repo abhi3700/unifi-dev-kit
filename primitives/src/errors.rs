@@ -9,4 +9,8 @@ pub enum UfiError {
 	InsufficientBalance,
 	#[error("Amount can't be zero. \nPlease enter a valid amount to proceed.")]
 	ZeroAmount,
+	#[error(
+		"Invalid current plan: You can only upgrade if your current plan is Free or with Paid Plan, should be either expired, or has zero credits."
+	)]
+	InvalidCurrentPlanForApiPurchase,
 }

@@ -10,6 +10,8 @@ pub enum ApiHandler {
 
 	/* API Key for User */
 	GenerateApiKey,
+	GetApi,
+	DelApiKey,
 
 	/* Auth */
 	GenerateJwtForNc,
@@ -56,6 +58,8 @@ impl ApiHandler {
 
 			/* API Key for User */
 			AH::GenerateApiKey => "/api_key/generate/{user_id}/{name}",
+			AH::GetApi => "/api/{user_id}",
+			AH::DelApiKey => "/api_key/del/{user_id}/{name}",
 
 			/* Auth */
 			AH::GenerateJwtForNc => "/auth/generate_jwt/{address}",
@@ -141,6 +145,7 @@ impl ApiHandler {
 	pub(crate) fn is_apikey_required(&self) -> bool {
 		use ApiHandler as AH;
 		match self {
+			// Signature verification before this api call.
 			AH::GenerateJwtForNc => false,
 			_ => true,
 		}
