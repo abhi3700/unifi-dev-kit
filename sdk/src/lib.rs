@@ -9,6 +9,7 @@ pub mod errors;
 pub mod health;
 pub mod pay;
 pub mod profile;
+pub mod session;
 pub mod types;
 pub mod wallet;
 

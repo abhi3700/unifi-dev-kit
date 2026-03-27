@@ -46,6 +46,10 @@ pub enum ApiHandler {
 	GetOcChainAllCoinsBalances,
 	GetWalletBalancesByChain,
 	GetWalletBalancesByCoin,
+
+	/* Session */
+	CreateSession,
+	GetSession,
 }
 
 impl ApiHandler {
@@ -95,6 +99,9 @@ impl ApiHandler {
 			AH::GetOcpReceipt => "/payment/onchain/receipt/{receipt_id}",
 			AH::GetOcpReceipts =>
 				"/payment/onchain/receipts/{user_id}/{sort_by_latest}/{from_start}",
+
+			AH::CreateSession => "/session/create/{user_id}",
+			AH::GetSession => "/session/{session_id}",
 		}
 	}
 

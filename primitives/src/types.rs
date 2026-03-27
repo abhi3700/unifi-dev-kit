@@ -1207,3 +1207,18 @@ impl From<ApiKey> for Bson {
 		})
 	}
 }
+
+#[derive(
+	Archive, RkyvSerialize, RkyvDeserialize, Debug, Default, Serialize, Deserialize, PartialEq,
+)]
+pub struct Session {
+	/// Address or Email
+	pub user_id: String,
+	pub jwt: String,
+}
+
+impl Session {
+	pub fn new(user_id: &str, jwt: &str) -> Self {
+		Self { user_id: user_id.to_owned(), jwt: jwt.to_owned() }
+	}
+}
