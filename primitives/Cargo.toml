@@ -9,8 +9,10 @@ alloy-contract = { version = "1.4.1"}
 alloy-primitives = { version = "1.4.1"}
 alloy-sol-types = { version = "1.4.1", features = ["eip712-serde", "json"], optional = true}
 bson = { version = "2.14.0", default-features = false}
+chrono = {version = "0.4.40", optional = true}
 eyre = "0.6.12"
 hex = {version = "0.4.3", optional = true}
+js-sys = { version = "0.3.77", optional = true }
 k256 = { version = "0.13.4", features = ["ecdsa", "pkcs8"], optional = true}
 num_cpus = { version = "1.16", optional = true }
 rkyv = "0.8.15"
@@ -22,6 +24,6 @@ thiserror = "2.0.12"
 base64 = "0.22.1"
 
 [features]
-utils = ["dep:num_cpus"]
+utils = ["dep:num_cpus", "dep:js-sys", "dep:chrono"]
 evm = ["dep:alloy-sol-types", "dep:k256", "dep:hex"]
 permit2 = ["dep:alloy-sol-types"]

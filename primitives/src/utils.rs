@@ -407,9 +407,33 @@ pub fn calculate_worker_threads() -> usize {
 	}
 }
 
+/// ## Usage
+/// - to set start_timestamp_us in API plan.
+#[cfg(target_arch = "wasm32")]
+pub fn now_timestamp_us() -> i64 {
+	(js_sys::Date::now() * 1000.0) as i64
+}
+
+/// ## Usage
+/// - for build_headers test inside api-plug lib.rs file.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn now_timestamp_us() -> i64 {
+	chrono::Utc::now().timestamp_micros()
+}
+
+/// ## Usage
+/// - It's run inside dioxus app whenever sdk.__(..) is used. We internally use `with_auth` in each
+///   fn, defined in api-plug fns.
+#[cfg(target_arch = "wasm32")]
 pub fn now_timestamp_secs() -> u64 {
-	use std::time::{SystemTime, UNIX_EPOCH};
-	SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
+	(js_sys::Date::now() / 1000.0) as u64
+}
+
+/// ## Usage
+/// - for build_headers test inside api-plug lib.rs file.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn now_timestamp_secs() -> u64 {
+	chrono::Utc::now().timestamp() as u64
 }
 
 /// Test
