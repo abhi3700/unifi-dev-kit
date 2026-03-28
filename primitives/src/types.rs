@@ -781,7 +781,7 @@ impl AsRef<str> for ApiPlan {
 }
 
 impl ApiPlan {
-	fn is_free(&self) -> bool {
+	pub fn is_free(&self) -> bool {
 		self.eq(&ApiPlan::Free)
 	}
 
