@@ -1238,3 +1238,18 @@ impl Session {
 		Self { user_id: user_id.to_owned(), jwt: jwt.to_owned() }
 	}
 }
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, Copy, PartialEq)]
+pub struct ScheduledPaymentsFilter {
+	/// - None: ignore
+	/// - Some(chain): On chain
+	pub chain: Option<ChainName>,
+	/// - None: ignore
+	/// - Some(true): Upcoming => execute_at > now
+	/// - Some(false): Overdue => execute_at < now
+	pub timing: Option<bool>,
+	/// - None: ignore
+	/// - Some(true): Active => is_active == true
+	/// - Some(false): Inactive => is_active == false
+	pub activity: Option<bool>,
+}
