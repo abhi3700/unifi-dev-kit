@@ -990,7 +990,7 @@ impl PayOnchainPayload {
 ///
 /// In future, we might store this. Then additional args:
 /// - `is_active`
-#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ScheduledPayOnchainPayload {
 	// /// Sender's user_id
 	// pub user_id: String,
@@ -999,6 +999,22 @@ pub struct ScheduledPayOnchainPayload {
 	pub execute_at: i64,
 	/// If `None`, then delete after `execute_at` elapsed during `scheduled_payments_handler` fn.
 	pub repeat: Option<PaymentRecurrence>,
+	/// Default: true. \
+	/// Usage: User can mark a due scheduled payment as inactive so that the handler ignores it
+	/// when running in background. This way, user doesn't have to delete the payment & can retain
+	/// till set UniFi's retention period (30 days).
+	pub is_active: bool,
+}
+
+impl Default for ScheduledPayOnchainPayload {
+	fn default() -> Self {
+		Self {
+			payload: Default::default(),
+			execute_at: Default::default(),
+			repeat: Default::default(),
+			is_active: true,
+		}
+	}
 }
 
 impl Display for ScheduledPayOnchainPayload {
