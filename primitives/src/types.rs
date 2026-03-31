@@ -987,9 +987,6 @@ impl PayOnchainPayload {
 }
 
 /// Currently, it's stored forever if repeat -> true, else when execute_at is done, we delete.
-///
-/// In future, we might store this. Then additional args:
-/// - `is_active`
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ScheduledPayOnchainPayload {
 	// /// Sender's user_id
@@ -1000,9 +997,10 @@ pub struct ScheduledPayOnchainPayload {
 	/// If `None`, then delete after `execute_at` elapsed during `scheduled_payments_handler` fn.
 	pub repeat: Option<PaymentRecurrence>,
 	/// Default: true. \
-	/// Usage: User can mark a due scheduled payment as inactive so that the handler ignores it
-	/// when running in background. This way, user doesn't have to delete the payment & can retain
-	/// till set UniFi's retention period (30 days).
+	/// ## Usage
+	/// User can mark a (upcoming/due) scheduled payment as inactive so that the handler ignores
+	/// it when running in background. This way, user doesn't have to delete the sched payment &
+	/// can remain in DB until retention period (set to 30 days atm).
 	pub is_active: bool,
 }
 
@@ -1243,13 +1241,23 @@ impl Session {
 pub struct ScheduledPaymentsFilter {
 	/// - None: ignore
 	/// - Some(chain): On chain
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub chain: Option<ChainName>,
 	/// - None: ignore
 	/// - Some(true): Upcoming => execute_at > now
-	/// - Some(false): Overdue => execute_at < now
+	/// - Some(false): Due => execute_at <= now
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub timing: Option<bool>,
+	/// - None: ignore
+	/// - Some(true): Restrict past/due results to only those within `RETENTION_PERIOD`
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub upto_retention: Option<bool>,
 	/// - None: ignore
 	/// - Some(true): Active => is_active == true
 	/// - Some(false): Inactive => is_active == false
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub activity: Option<bool>,
+	/// Default: 60.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub limit: Option<i64>,
 }
