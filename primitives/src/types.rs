@@ -168,6 +168,14 @@ impl ChainName {
 		}
 	}
 
+	pub fn to_gas_coin(&self) -> Coin {
+		use ChainName as C;
+		match self {
+			C::Ethereum | C::Sepolia | C::Anvil => Coin::ETH,
+			C::Polygon => Coin::POL,
+		}
+	}
+
 	/// Get the gas limit (max. feasible for prediction so that the actual gas consumed is lower
 	/// than the predicted) of all the used functions (in onchain payment) for a given
 	/// coin. Although all the ERC20 tokens have same gas usage irrespective of chains. But, just
@@ -342,16 +350,6 @@ impl Coin {
 			C::USDT => StableCoin::USDT.decimals(),
 			C::USDC => StableCoin::USDC.decimals(),
 			C::DAI => StableCoin::DAI.decimals(),
-		}
-	}
-
-	pub fn chain_to_gas_coin(chain: ChainName) -> Coin {
-		use ChainName as C;
-		match chain {
-			C::Ethereum => Coin::ETH,
-			C::Polygon => Coin::POL,
-			C::Sepolia => Coin::ETH,
-			C::Anvil => Coin::ETH,
 		}
 	}
 }
@@ -1057,6 +1055,13 @@ pub enum PaymentRecurrence {
 	Weekly,
 	Monthly,
 	Custom(i64),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct GetScheduledPaymentsResponse {
+	pub payments: Vec<ScheduledPayOnchainPayload>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub est_fee: Option<U256>,
 }
 
 /* Platform */

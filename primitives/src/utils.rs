@@ -1,6 +1,6 @@
 use crate::{
 	errors::UfiError,
-	types::{Coin, GasEstimate, PreOcpPayload, PreOcpValuesNcwParams, StableCoin},
+	types::{GasEstimate, PreOcpPayload, PreOcpValuesNcwParams, StableCoin},
 };
 use alloy_primitives::{
 	Address, U256,
@@ -155,7 +155,7 @@ pub fn compute_est_fee_ncw(
 
 	// Optimization: Calculate price denominator once.
 	// Formula: coin_price * 10^(gas_coin_decimals)
-	let gas_coin_decimals = Coin::chain_to_gas_coin(chain).decimals() as i32;
+	let gas_coin_decimals = chain.to_gas_coin().decimals() as i32;
 	let price_denom = coin_price * 10f64.powi(gas_coin_decimals);
 
 	// 4. Define Calculation Logic (Closure to handle repetition)
