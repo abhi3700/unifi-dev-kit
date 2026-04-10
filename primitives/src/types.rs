@@ -1063,7 +1063,7 @@ pub enum PaymentRecurrence {
 pub struct GetScheduledPaymentsResponse {
 	pub payments: Vec<ScheduledPayOnchainPayload>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub est_fee: Option<U256>,
+	pub est_fee: Option<String>,
 }
 
 /* Platform */
