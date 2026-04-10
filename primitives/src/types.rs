@@ -550,6 +550,7 @@ pub struct OcPayReceipt {
 	pub block_num: i64,
 	pub status: OcPayReceiptStatus,
 	pub start_ts_us: i64,
+	/// timestamp @ `Confirmed` block status.
 	pub end_ts_us: i64,
 }
 
