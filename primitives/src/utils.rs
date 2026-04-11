@@ -85,18 +85,72 @@ pub fn parse_human_fmt_to_u256(
 ///
 ///
 /// ## Notes
-/// - This fn can't be `async` bcoz on change of amount on UI, the text box err (if any) should show
-///   synchronously.
+/// - This fn should't be `async` bcoz on change of amount on UI, the text box err (if any) should
+///   show synchronously on every digit modification in amount.
 /// - If the fee is:
-///   - excl: We just have the entered amount. So, there is a `est fees` computed after considering
-///     only amount & then `amount + est_fee` is checked against 👉 balance, allowance, etc.
-///   - incl: We have to do the maths once & then.
+///   - excl:
+///     - The user-entered `amount` does NOT include fees.
+///     - An initial `est_fee` is computed based only on the entered amount (or even empty/0).
+///     - Then, the effective spend becomes:
+///
+///           total_spend = amount + est_fee
+///
+///     - This `total_spend` is checked against allowance to determine whether approval is required.
+///     - If approval is required, gas usage increases → which increases `est_fee`.
+///
+///     - Hence, fee estimation indirectly depends on allowance, and allowance depends on
+///       `total_spend`, which itself depends on `est_fee`.
+///
+///     - This introduces a dependency loop:
+///
+///           est_fee → total_spend → allowance_check → gas_path → est_fee
+///
+///     - Therefore, a re-computation step is required to stabilize the final fee.
+///
+///   - incl:
+///     - The user-entered `amount` already includes fees.
+///     - Hence, `amount` directly represents the total spend:
+///
+///           total_spend = amount
+///
+///     - From this, we derive: payee_amount = amount - est_fee admin_fee    = est_fee
+///
+///     - Since `total_spend` is fixed upfront, the allowance check is stable:
+///         - allowance >= total_spend → no approve needed
+///         - allowance < total_spend  → approve required
+///
+///     - The gas path (approve vs no approve) is determined in a single pass, so `est_fee` does not
+///       require re-computation.
+///
+///     - Therefore, unlike `fee_excl`, there is no dependency loop and a single calculation is
+///       sufficient.
 ///
 /// ## Arguments
 /// - `payload`: selected {coin, chain}
-/// - `amt_or_tot_amount`: sum of [amount1, amount2, .., admin_fee]. E.g. "112.432432" USDT.
-///   - fee_excl => then parse entered amount. So, amount parsed.
-///   - fee_incl => then parse entered amount + est_fee. So, (amount + est_fee) parsed.
+/// - `amt_or_tot_amount`:
+///   - Represents the **input value to be parsed into `tot_amount`** for fee + allowance logic.
+///
+///   - Interpretation depends on `is_fee_incl`:
+///
+///     - fee_excl:
+///       - Input is the **user-entered amount only** (fees NOT included).
+///       - Parsed as:
+///
+///             tot_amount = amount
+///
+///       - Final spend becomes `amount + est_fee` after re-computation.
+///
+///     - fee_incl:
+///       - Input is the **total spend (amount already includes fee)**.
+///       - Parsed directly as:
+///
+///             tot_amount = amount  // already includes fee
+///
+///       - No adjustment needed; this value is treated as final spend.
+///
+///   - Example:
+///       - fee_excl: "10.12"  → means payee gets 10.12, fee added later
+///       - fee_incl: "10.12"  → means total spend is 10.12 (payee gets amount - fee)
 /// - `pre_ocp_values`: params (from fn: `prefetch_ncw_balance_fee_params`) for calculating est fees
 ///   synchronously.
 /// - `is_fee_incl`
@@ -111,9 +165,9 @@ pub fn parse_human_fmt_to_u256(
 ///
 /// ## Returns
 /// - `is_coin_allowance_suff`: NOTE: due to this field returned, we don't have to convert the
-///   formatted required allowance to U256 for zero check.
-///   - true: coin allowance is sufficient. Hence, all ok from amount box side.
-///   - false: coin allowance is insufficient. So, an err is shown saying "Please approve X amount"
+///   formatted required allowance to U256 for zero check as `value.is_zero()`.
+///   - true  → sufficient, no approval needed.
+///   - false → insufficient, prompt: "Please approve X amount".
 /// - required_allowance: X value is to be approved by payer to Permit2. E.g. `21.34545` USDT or
 ///   "0.00" USDT.
 /// - formatted est fees. E.g. `0.132433` USDT or "0.00" USDT.
@@ -184,7 +238,37 @@ pub fn compute_est_fee_ncw(
 	// 5. Initial Calculation
 	let (mut est_fee_u256, mut required_allowance_val) = calc_snapshot(tot_amount)?;
 
-	// 6. Conditional Re-calculation (If fee is excluded, total amount increases)
+	// 6. Conditional Re-calculation (Fee-Excl. Case)
+	//
+	// In `fee_excl` mode, the user-entered `amount` does NOT include fees.
+	// However, the actual spend becomes:
+	//
+	//     total_spend = amount + est_fee
+	//
+	// This introduces a dependency loop:
+	//
+	//     est_fee → total_spend → allowance_check → gas_path → est_fee
+	//
+	// Why recomputation is required:
+	// - The initial `est_fee` is calculated using only `amount`.
+	// - Once we add `est_fee` to form `total_spend`, the allowance condition may change:
+	//     - allowance >= amount      → no approve needed
+	//     - allowance < total_spend  → approve required
+	//
+	// - This change affects the gas path:
+	//     - permit_transfer_from           (no approve)
+	//     - approve + permit_transfer_from (with approve)
+	//
+	// - Since gas usage changes, the fee also changes.
+	//
+	// Therefore:
+	// 1. Add `est_fee` to `amount` to get the real spend (`total_spend`).
+	// 2. Re-run the fee + allowance computation using this updated value.
+	//
+	// NOTE:
+	// - This is a 2-pass approximation that is sufficient in practice.
+	// - Further iterations are unnecessary as the system stabilizes quickly.
+	// - For `fee_incl`, this step is skipped because `amount` already represents total spend.
 	if !is_fee_incl {
 		tot_amount += est_fee_u256;
 		if !use_in_ui && tot_amount.gt(&balance) {
@@ -200,7 +284,6 @@ pub fn compute_est_fee_ncw(
 	let required_allowance_val_fmt = fmt_output(required_allowance_val, coin_decimals)?;
 	let est_fee_fmt = fmt_output(est_fee_u256, coin_decimals)?;
 
-	// Ok((is_suff, required_allowance_val.to_string(), est_fee_fmt))
 	Ok((is_suff, required_allowance_val_fmt, est_fee_fmt))
 }
 

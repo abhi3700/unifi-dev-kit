@@ -916,6 +916,7 @@ pub struct PreOcpValuesNcw {
 	pub est_fee: String,
 }
 
+/// Pre-OCP Values for NCW Params for single pay
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValuesNcwParams {
 	/// Allowance to `Permit2` need to use for comparo. So, "U256" in String.
@@ -931,11 +932,43 @@ pub struct PreOcpValuesNcwParams {
 	/// ### Usage
 	/// - required in compute est. fee (in stablecoin).
 	pub gas_price: u128,
-	/// E.g. ETH, POL, ..
+	/// E.g. ETH, POL, .. in USD.
 	/// ### Usage
 	/// - required in compute est. fee (in stablecoin).
 	pub gas_token_price: f64,
-	/// E.g. USDT, USDC, ..
+	/// E.g. USDT, USDC, .. in USD
+	/// ### Usage
+	/// - required in compute est. fee (in stablecoin).
+	pub coin_price: f64,
+}
+
+/// Pre-OCP Values for NCW Params for bulk pay
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+pub struct PreOcpValuesNcwParamsBulk {
+	pub coin_entries: Vec<PreOcpValuesNcwParamsBulkCoin>,
+	/// Gas price in wei.
+	/// ### Usage
+	/// - required in compute est. fee (in stablecoin).
+	pub gas_price: u128,
+	/// E.g. ETH, POL, .. in USD.
+	/// ### Usage
+	/// - required in compute est. fee (in stablecoin).
+	pub gas_token_price: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+pub struct PreOcpValuesNcwParamsBulkCoin {
+	pub coin: StableCoin,
+	/// Allowance to `Permit2` need to use for comparo. So, "U256" in String.
+	/// ### Usage
+	/// - compare with amount for est. gas_usage
+	pub allowance: String,
+	/// Net balance is formatted.
+	/// ### Usage
+	/// - display in UI
+	/// - compare with amount for err.
+	pub balance: String,
+	/// E.g. USDT, USDC, .. in USD
 	/// ### Usage
 	/// - required in compute est. fee (in stablecoin).
 	pub coin_price: f64,
