@@ -287,6 +287,20 @@ pub fn compute_est_fee_ncw(
 	Ok((is_suff, required_allowance_val_fmt, est_fee_fmt))
 }
 
+/// TODO: Implement this. Actually, unlike single NC Pay, we use automation like Falcon. So, no user
+/// interface for now. Hence, no multiple entry by user in amount field in UI. Currently depend on
+/// `fetch_pre_ocp_balance_and_est_fee_ncw_bulkpay` fn.
+/* pub */
+fn _compute_est_fee_ncw_bulkpay(
+	_payload: PreOcpPayload,
+	_amt_or_tot_amount: &str,
+	_pre_ocp_values: &PreOcpValuesNcwParams,
+	_is_fee_incl: bool,
+	_use_in_ui: bool,
+) -> eyre::Result<(Vec<(StableCoin,)>, String)> {
+	todo!()
+}
+
 /// Get required allowance value (considering practical case).
 ///
 /// NOTE: If user opts for approving min. amount (instead of `U256::MAX`), then instead of exact

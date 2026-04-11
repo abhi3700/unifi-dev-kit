@@ -916,6 +916,34 @@ pub struct PreOcpValuesNcw {
 	pub est_fee: String,
 }
 
+/// Pre-OCP Values for NCW Params for bulk pay
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+pub struct PreOcpValuesNcwBulk {
+	pub coin_entries: Vec<PreOcpValuesNcwBulkCoin>,
+	/// Est. fee is formatted. E.g. "1.23243" USDT
+	/// ### Usage
+	/// - display in UI
+	pub est_fee: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+pub struct PreOcpValuesNcwBulkCoin {
+	pub coin: StableCoin,
+	/// Is coin allowance sufficient?
+	/// NOTE: This field is redundant. But for direct use, added this field. Else, we have to
+	/// convert required_allowance to U256 to check if it's zero.
+	pub is_suff: bool,
+	/// User need to approve this value. E.g. "3.354343" USDT
+	/// ### Usage
+	/// - show as formatted in toast in UI.
+	pub required_allowance: String,
+	/// Balance is formatted. E.g. "243.354343" USDT
+	/// ### Usage
+	/// - display in UI
+	/// - compare with amount for err.
+	pub balance: String,
+}
+
 /// Pre-OCP Values for NCW Params for single pay
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValuesNcwParams {
@@ -1082,6 +1110,21 @@ impl ScheduledPayOnchainPayload {
 			self.execute_at < now + Self::MAX_SCHEDULED_DURATION;
 
 		(is_san_payload && is_san_execute, to_addr, amount, is_san_execute)
+	}
+}
+
+pub trait CoinAmountLike {
+	fn coin(&self) -> StableCoin;
+	fn amount(&self) -> &str;
+}
+
+impl CoinAmountLike for ScheduledPayOnchainPayload {
+	fn coin(&self) -> StableCoin {
+		self.payload.coin
+	}
+
+	fn amount(&self) -> &str {
+		&self.payload.amount
 	}
 }
 
