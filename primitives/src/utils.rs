@@ -1,13 +1,16 @@
 use crate::{
 	errors::UfiError,
-	types::{GasEstimate, PreOcpPayload, PreOcpValuesNcwParams, StableCoin},
+	types::{
+		ChainName, GasEstimate, PreOcpPayload, PreOcpValuesNcwBulk, PreOcpValuesNcwBulkCoin,
+		PreOcpValuesNcwParams, PreOcpValuesNcwParamsBulk, StableCoin,
+	},
 };
 use alloy_primitives::{
 	Address, U256,
 	utils::{format_units, parse_units},
 };
 use eyre::{Context, OptionExt, ensure};
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 /// Format any num (in U256 String) to Decimal formatted considering coin's decimals.
 pub fn fmt_value(num_in_u256_str: &str, coin: StableCoin) -> eyre::Result<String> {
@@ -287,18 +290,164 @@ pub fn compute_est_fee_ncw(
 	Ok((is_suff, required_allowance_val_fmt, est_fee_fmt))
 }
 
-/// TODO: Implement this. Actually, unlike single NC Pay, we use automation like Falcon. So, no user
-/// interface for now. Hence, no multiple entry by user in amount field in UI. Currently depend on
-/// `fetch_pre_ocp_balance_and_est_fee_ncw_bulkpay` fn.
-/* pub */
-fn _compute_est_fee_ncw_bulkpay(
-	_payload: PreOcpPayload,
-	_amt_or_tot_amount: &str,
-	_pre_ocp_values: &PreOcpValuesNcwParams,
-	_is_fee_incl: bool,
-	_use_in_ui: bool,
-) -> eyre::Result<(Vec<(StableCoin,)>, String)> {
-	todo!()
+/// Compute estimated fee for NC **Bulk Pay** across multiple coins.
+///
+/// This function extends `compute_est_fee_ncw` (single-pay) to handle a batch of payments
+/// involving **multiple coins**, where each coin may have a different allowance state,
+/// balance, and gas path.
+///
+/// ## Key Properties
+/// - **Per-coin allowance evaluation**: Each coin is evaluated independently for allowance
+///   sufficiency:
+///
+///   ```
+///   allowance >= total_spend_for_that_coin
+///   ```
+///
+///   This determines whether the gas pathincludes `approve` or not.
+///
+/// - **Correct gas path per coin**: Gas usage differs per coin depending on allowance:
+///   - sufficient allowance → `permit_transfer_from`
+///   - insufficient allowance → `approve + permit_transfer_from`
+///
+/// - **2-pass recomputation (fee-excl only)**: Same logic as single-pay: ```text est_fee →
+///   total_spend → allowance_check → gas_path → est_fee ``` Hence:
+///   1. Compute initial fee using raw amount.
+///   2. Add fee to amount (`fee_excl`).
+///   3. Recompute fee using updated total.
+///
+///   This ensures correct handling when allowance sufficiency flips after including fee.
+///
+/// - **No naive multiplication**: Unlike older logic (`est_fee * batch_len`), this function:
+///   - computes fee per coin based on its actual gas path
+///   - sums all per-coin fees
+///
+///   This is critical because:
+///   - some coins may require approval
+///   - others may not
+///   → resulting in different gas usage per coin
+///
+/// ## Arguments
+/// - `chain`: selected chain
+/// - `tot_amount_per_coin`: Aggregated total amount per coin across the batch
+///
+///   ```
+///   USDT → sum(all USDT entries) USDC → sum(all USDC entries)
+///   ```
+///
+/// - `params`: pre-fetched values from `prefetch_ncw_balance_fee_params_bulkpay`
+/// - `is_fee_incl`: whether amount already includes fee
+/// - `use_in_ui`: skips hard balance validation when true
+///
+/// ## Returns
+/// - `PreOcpValuesNcwBulk`
+///   - `coin_entries`:
+///     - `is_suff`: allowance sufficiency per coin
+///     - `required_allowance`: required approval amount per coin
+///     - `balance`: formatted balance
+///   - `est_fee`:
+///     - total estimated fee = **sum of per-coin computed fees**
+///     - NOT derived from `batch_len`
+///
+/// ## Important Note
+/// This implementation assumes that `PreOcpValuesNcwBulk.est_fee` is expressed in the
+/// **default stablecoin unit** (e.g., USDT).
+///
+/// If fee denomination needs to change (e.g., per-coin or gas token), only the final
+/// aggregation/formatting step should be adjusted.
+///
+/// ## Design pros
+/// - Handles mixed allowance states across coins
+/// - Avoids incorrect fee scaling via `batch_len`. E.g. est_fee * batch_len
+/// - Mirrors single-pay correctness guarantees
+/// - Deterministic and stable after 2-pass computation (in case of fee-excl.)
+pub fn compute_est_fee_ncw_bulkpay(
+	chain: ChainName,
+	tot_amount_per_coin: HashMap<StableCoin, U256>,
+	params: PreOcpValuesNcwParamsBulk,
+	is_fee_incl: bool,
+	use_in_ui: bool,
+) -> eyre::Result<PreOcpValuesNcwBulk> {
+	let PreOcpValuesNcwParamsBulk { coin_entries: params_coin_entries, gas_price, gas_token_price } =
+		params;
+
+	let mut coin_entries = Vec::with_capacity(params_coin_entries.len());
+	let mut total_est_fee_u256 = U256::ZERO;
+
+	for entry in params_coin_entries {
+		let coin = entry.coin;
+		let coin_decimals = coin.decimals();
+
+		let allowance = U256::from_str(&entry.allowance).wrap_err("Failed to parse allowance")?;
+		let balance = parse_human_fmt_to_u256(&entry.balance, coin_decimals, false)
+			.wrap_err("Failed to parse balance")?;
+
+		let mut tot_amount = tot_amount_per_coin
+			.get(&coin)
+			.copied()
+			.ok_or_eyre(format!("Missing total amount for coin: {coin:?}"))?;
+
+		if !use_in_ui && tot_amount.gt(&balance) {
+			return Err(UfiError::InsufficientBalance.into())
+		}
+
+		let GasEstimate { approve, permit_transfer_from, .. } = chain.get_gas_usage_limit(coin);
+
+		// fee = (gas_usage * gas_price * gas_token_price * platform_multiplier)
+		//       / (coin_price * 10^(gas_coin_decimals))
+		let gas_coin_decimals = chain.to_gas_coin().decimals() as i32;
+		let price_denom = entry.coin_price * 10f64.powi(gas_coin_decimals);
+
+		let calc_snapshot = |target_amt: U256| -> eyre::Result<(U256, U256)> {
+			let is_suff = !allowance.is_zero() && allowance.ge(&target_amt);
+
+			let (est_gas_usage, required_allowance_val) = if is_suff {
+				(permit_transfer_from, U256::ZERO)
+			} else {
+				(approve + permit_transfer_from, target_amt - allowance)
+			};
+
+			let platform_payment_fee_multiplier = 1.15;
+			let est_gas_fee = (est_gas_usage * gas_price) as f64;
+			let est_fee_f64 =
+				est_gas_fee * gas_token_price * platform_payment_fee_multiplier / price_denom;
+			let est_fee_u256 =
+				parse_human_fmt_to_u256(&est_fee_f64.to_string(), coin_decimals, false)?;
+
+			Ok((est_fee_u256, required_allowance_val))
+		};
+
+		let (mut est_fee_u256, mut required_allowance_val) = calc_snapshot(tot_amount)?;
+
+		// Same reasoning as single-pay:
+		// for fee-excl, total spend becomes amount + est_fee, which can change allowance
+		// sufficiency, so recompute once using the updated spend.
+		if !is_fee_incl {
+			tot_amount += est_fee_u256;
+
+			if !use_in_ui && tot_amount.gt(&balance) {
+				return Err(UfiError::InsufficientBalance.into())
+			}
+
+			(est_fee_u256, required_allowance_val) = calc_snapshot(tot_amount)?;
+		}
+
+		total_est_fee_u256 = total_est_fee_u256
+			.checked_add(est_fee_u256)
+			.ok_or_eyre("Overflow while summing bulk-pay estimated fees")?;
+
+		coin_entries.push(PreOcpValuesNcwBulkCoin {
+			coin,
+			is_suff: required_allowance_val.is_zero(),
+			required_allowance: fmt_output(required_allowance_val, coin_decimals)?,
+			balance: entry.balance,
+		});
+	}
+
+	Ok(PreOcpValuesNcwBulk {
+		coin_entries,
+		est_fee: fmt_output(total_est_fee_u256, StableCoin::default().decimals())?,
+	})
 }
 
 /// Get required allowance value (considering practical case).
