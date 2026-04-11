@@ -922,7 +922,7 @@ pub struct PreOcpValuesNcwParams {
 	/// ### Usage
 	/// - compare with amount for est. gas_usage
 	pub allowance: String,
-	/// Balance is formatted.
+	/// Net balance is formatted.
 	/// ### Usage
 	/// - display in UI
 	/// - compare with amount for err.

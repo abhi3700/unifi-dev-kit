@@ -89,7 +89,7 @@ pub fn parse_human_fmt_to_u256(
 ///   synchronously.
 /// - If the fee is:
 ///   - excl: We just have the entered amount. So, there is a `est fees` computed after considering
-///     only amount & then `amount + est_fee` is checked against allowance, etc.
+///     only amount & then `amount + est_fee` is checked against 👉 balance, allowance, etc.
 ///   - incl: We have to do the maths once & then.
 ///
 /// ## Arguments
