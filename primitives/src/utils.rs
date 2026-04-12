@@ -84,6 +84,26 @@ pub fn parse_human_fmt_to_u256(
 	Ok(scaled_whole_part + fractional_part)
 }
 
+/// Resolve NCW Gas usage and allowance.
+///
+/// NOTE: 50k gas additionally added for the fee payment to admin.
+/// Why 50k? 👉 Actual spent is around 112k gas, which might increase.
+/// So, for safety 170k (120 + 50) gas as fee -> Admin. Now, when the act. amount is 112k =>
+/// refund: 170k - 112k = 58k gas ~ $ (price @ at that time).
+fn resolve_ncw_gas_usage_and_allowance(
+	is_suff: bool,
+	allowance: U256,
+	target_amt: U256,
+	approve: u128,
+	permit_transfer_gas: u128,
+) -> (u128, U256) {
+	if is_suff {
+		(permit_transfer_gas + 50_000, U256::ZERO)
+	} else {
+		(approve + permit_transfer_gas + 50_000, target_amt - allowance)
+	}
+}
+
 /// Compute Est. fee for NC Pay.
 ///
 ///
@@ -221,11 +241,13 @@ pub fn compute_est_fee_ncw(
 		// NOTE: For C Pay, allowance is either 0 or MAX unlike in NC Pay.
 		let is_suff = !allowance.is_zero() && allowance.ge(&target_amt);
 
-		let (est_gas_usage, required_allowance_val) = if is_suff {
-			(permit_transfer_from, U256::ZERO)
-		} else {
-			(approve + permit_transfer_from, target_amt - allowance)
-		};
+		let (est_gas_usage, required_allowance_val) = resolve_ncw_gas_usage_and_allowance(
+			is_suff,
+			allowance,
+			target_amt,
+			approve,
+			permit_transfer_from,
+		);
 
 		// NOTE: Add platform_fee on top of network fee.
 		let platform_payment_fee_multiplier = 1.15;
@@ -364,6 +386,7 @@ pub fn compute_est_fee_ncw(
 pub fn compute_est_fee_ncw_bulkpay(
 	chain: ChainName,
 	tot_amount_per_coin: HashMap<StableCoin, U256>,
+	payments_per_coin: HashMap<StableCoin, u32>,
 	params: PreOcpValuesNcwParamsBulk,
 	is_fee_incl: bool,
 	use_in_ui: bool,
@@ -371,10 +394,22 @@ pub fn compute_est_fee_ncw_bulkpay(
 	let PreOcpValuesNcwParamsBulk { coin_entries: params_coin_entries, gas_price, gas_token_price } =
 		params;
 
+	ensure!(
+		params_coin_entries.len().le(&StableCoin::all().len()) &&
+			tot_amount_per_coin.len().le(&StableCoin::all().len()),
+		"Params coin entries & tot amount per coin can't exceed coins max. length"
+	);
+
+	let common_decimals = params_coin_entries
+		.iter()
+		.map(|entry| entry.coin.decimals())
+		.max()
+		.unwrap_or(StableCoin::default().decimals());
+
 	let mut coin_entries = Vec::with_capacity(params_coin_entries.len());
 	let mut total_est_fee_u256 = U256::ZERO;
 
-	for entry in params_coin_entries {
+	for entry in params_coin_entries.iter() {
 		let coin = entry.coin;
 		let coin_decimals = coin.decimals();
 
@@ -398,14 +433,29 @@ pub fn compute_est_fee_ncw_bulkpay(
 		let gas_coin_decimals = chain.to_gas_coin().decimals() as i32;
 		let price_denom = entry.coin_price * 10f64.powi(gas_coin_decimals);
 
+		let payment_count = payments_per_coin
+			.get(&coin)
+			.ok_or_eyre(format!("Failed to get pay count for {coin}"))?
+			.to_owned();
+		// NOTE:
+		// - In a bulk batch, only **one `approve`** is required per coin (if allowance is
+		//   insufficient).
+		// - However, `permit_transfer_from` is executed **per payment**, so its gas cost scales
+		//   with the number of payments for that coin.
+		//
+		// Hence:
+		//     total_permit_transfer_gas = permit_transfer_from * payment_count
+		let total_permit_transfer_gas = permit_transfer_from * payment_count as u128;
 		let calc_snapshot = |target_amt: U256| -> eyre::Result<(U256, U256)> {
 			let is_suff = !allowance.is_zero() && allowance.ge(&target_amt);
 
-			let (est_gas_usage, required_allowance_val) = if is_suff {
-				(permit_transfer_from, U256::ZERO)
-			} else {
-				(approve + permit_transfer_from, target_amt - allowance)
-			};
+			let (est_gas_usage, required_allowance_val) = resolve_ncw_gas_usage_and_allowance(
+				is_suff,
+				allowance,
+				target_amt,
+				approve,
+				total_permit_transfer_gas,
+			);
 
 			let platform_payment_fee_multiplier = 1.15;
 			let est_gas_fee = (est_gas_usage * gas_price) as f64;
@@ -432,22 +482,29 @@ pub fn compute_est_fee_ncw_bulkpay(
 			(est_fee_u256, required_allowance_val) = calc_snapshot(tot_amount)?;
 		}
 
-		total_est_fee_u256 = total_est_fee_u256
-			.checked_add(est_fee_u256)
-			.ok_or_eyre("Overflow while summing bulk-pay estimated fees")?;
+		let normalized_est_fee_u256 = if coin_decimals == common_decimals {
+			est_fee_u256
+		} else {
+			let scale = U256::from(10).pow(U256::from((common_decimals - coin_decimals) as u32));
+			est_fee_u256
+				.checked_mul(scale)
+				.ok_or_eyre("Overflow while normalizing bulk-pay estimated fee")?
+		};
 
+		total_est_fee_u256 = total_est_fee_u256
+			.checked_add(normalized_est_fee_u256)
+			.ok_or_eyre("Overflow while summing bulk-pay estimated fees")?;
 		coin_entries.push(PreOcpValuesNcwBulkCoin {
 			coin,
 			is_suff: required_allowance_val.is_zero(),
 			required_allowance: fmt_output(required_allowance_val, coin_decimals)?,
-			balance: entry.balance,
+			balance: entry.balance.to_owned(),
 		});
 	}
 
-	Ok(PreOcpValuesNcwBulk {
-		coin_entries,
-		est_fee: fmt_output(total_est_fee_u256, StableCoin::default().decimals())?,
-	})
+	let est_fee = fmt_output(total_est_fee_u256, common_decimals)?;
+
+	Ok(PreOcpValuesNcwBulk { coin_entries, est_fee })
 }
 
 /// Get required allowance value (considering practical case).
