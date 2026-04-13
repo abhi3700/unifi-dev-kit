@@ -108,6 +108,44 @@ fn resolve_ncw_gas_usage_and_allowance(
 	}
 }
 
+/// Normalize a value to higher decimals before summing mixed-decimal fees. \
+/// E.g. 6 -> 18.
+///
+/// ## Example
+/// ```text
+/// Mixed estimated fees before normalization:
+/// - USDT (6 dp):  1.232340              -> 1232340
+/// - DAI  (18 dp): 2.232432323200000000  -> 2232432323200000000
+/// - USDT (6 dp): 11.232434              -> 11232434
+/// - USDC (6 dp):  3.343535              -> 3343535
+///
+/// These raw U256 values must NOT be summed directly,
+/// because they are expressed using different decimal precisions.
+///
+/// So, first normalize all values to the max decimals in the batch
+/// (here: 18 decimals):
+///
+/// - 1232340             -> 1232340000000000000
+/// - 2232432323200000000 -> 2232432323200000000
+/// - 11232434            -> 11232434000000000000
+/// - 3343535             -> 3343535000000000000
+///
+/// Now all values are in the same decimal space,
+/// so summation becomes correct:
+///
+///   1232340000000000000
+/// + 2232432323200000000
+/// +11232434000000000000
+/// + 3343535000000000000
+/// =18123941323200000000
+///
+/// Human-readable (18 decimals):
+/// 18.123941323200000000
+/// ```
+///
+/// ## Usage
+/// - In a mix of amounts with varying decimals, all values should be normalized before adding like
+///   in `tot_est_fee` in bulk pay.
 fn normalize_est_fee_u256(
 	est_fee_u256: U256,
 	from_decimals: u8,
@@ -126,6 +164,32 @@ fn normalize_est_fee_u256(
 	Ok(val)
 }
 
+/// Convert a normalized value (common decimal space) back to a coin's native decimals. \
+/// E.g. 18 -> 6.
+///
+/// ## Example
+/// ```text
+/// Suppose total estimated fee was computed in normalized 18 decimals:
+///
+/// 18123941323200000000  (18 dp)
+///
+/// For a 6-decimal coin (e.g. USDT/USDC), convert back:
+///
+/// 18123941323200000000 -> 18123941
+///
+/// Human-readable:
+/// 18.123941
+/// ```
+///
+/// ## Why this is required
+/// - All mixed-decimal values are first normalized to a common decimal space (e.g. 18) for safe
+///   summation.
+/// - Before returning or displaying, values must be converted back to the target coin's native
+///   decimals.
+///
+/// ## Usage
+/// - Used after summing normalized fees (e.g. `total_est_fee_u256` in bulk pay) to convert the
+///   result into the fee coin's decimals before formatting.
 fn denormalize_est_fee_u256(
 	est_fee_u256: U256,
 	from_decimals: u8,
