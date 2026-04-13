@@ -895,6 +895,7 @@ pub struct PreOcpValues {
 	pub est_fee: String,
 }
 
+/// Pre-OCP Values using NCW Params (for calc) for single pay.
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValuesNcw {
 	/// Is coin allowance sufficient?
@@ -916,10 +917,12 @@ pub struct PreOcpValuesNcw {
 	pub est_fee: String,
 }
 
-/// Pre-OCP Values for NCW Params for bulk pay
+/// Pre-OCP Values using NCW Params (for calc) for bulk pay.
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValuesNcwBulk {
+	/// For each coin (unique)
 	pub coin_entries: Vec<PreOcpValuesNcwBulkCoin>,
+	/// Total est. fee \
 	/// Est. fee is formatted. E.g. "1.23243" USDT
 	/// ### Usage
 	/// - display in UI

@@ -2,7 +2,8 @@ use crate::{
 	errors::UfiError,
 	types::{
 		ChainName, GasEstimate, PreOcpPayload, PreOcpValuesNcwBulk, PreOcpValuesNcwBulkCoin,
-		PreOcpValuesNcwParams, PreOcpValuesNcwParamsBulk, StableCoin,
+		PreOcpValuesNcwParams, PreOcpValuesNcwParamsBulk, PreOcpValuesNcwParamsBulkCoin,
+		StableCoin,
 	},
 };
 use alloy_primitives::{
@@ -97,13 +98,86 @@ fn resolve_ncw_gas_usage_and_allowance(
 	target_amt: U256,
 	approve: u128,
 	permit_transfer_gas: u128,
+	single_or_bulk: bool,
 ) -> (u128, U256) {
+	let extra = if single_or_bulk { 50_000 } else { 0 };
 	if is_suff {
-		(permit_transfer_gas + 50_000, U256::ZERO)
+		(permit_transfer_gas + extra, U256::ZERO)
 	} else {
-		(approve + permit_transfer_gas + 50_000, target_amt - allowance)
+		(approve + permit_transfer_gas + extra, target_amt - allowance)
 	}
 }
+
+fn normalize_est_fee_u256(
+	est_fee_u256: U256,
+	from_decimals: u8,
+	max_decimals: u8,
+	context: &str,
+) -> eyre::Result<U256> {
+	let val = if from_decimals == max_decimals {
+		est_fee_u256
+	} else {
+		let scale = U256::from(10).pow(U256::from((max_decimals - from_decimals) as u32));
+		est_fee_u256
+			.checked_mul(scale)
+			.ok_or_eyre(format!("Overflow while normalizing {context}"))?
+	};
+
+	Ok(val)
+}
+
+fn denormalize_est_fee_u256(
+	est_fee_u256: U256,
+	from_decimals: u8,
+	to_decimals: u8,
+) -> eyre::Result<U256> {
+	if from_decimals == to_decimals {
+		Ok(est_fee_u256)
+	} else if from_decimals > to_decimals {
+		let scale = U256::from(10).pow(U256::from((from_decimals - to_decimals) as u32));
+		Ok(est_fee_u256 / scale)
+	} else {
+		let scale = U256::from(10).pow(U256::from((to_decimals - from_decimals) as u32));
+		est_fee_u256
+			.checked_mul(scale)
+			.ok_or_eyre("Overflow while denormalizing estimated fee")
+	}
+}
+
+fn calc_ncw_est_fee_snapshot(
+	allowance: U256,
+	target_amt: U256,
+	approve: u128,
+	permit_transfer_gas: u128,
+	single_or_bulk: bool,
+	gas_price: u128,
+	gas_token_price: f64,
+	platform_payment_fee_multiplier: f64,
+	price_denom: f64,
+	coin_decimals: u8,
+) -> eyre::Result<(U256, U256)> {
+	// NOTE: For C Pay, allowance is either 0 or MAX unlike in NC Pay.
+	let is_suff = !allowance.is_zero() && allowance.ge(&target_amt);
+
+	let (est_gas_usage, required_allowance_val) = resolve_ncw_gas_usage_and_allowance(
+		is_suff,
+		allowance,
+		target_amt,
+		approve,
+		permit_transfer_gas,
+		single_or_bulk,
+	);
+
+	// fee = (gas_usage * gas_price * gas_token_price * platform_multiplier)
+	//       / price_denom
+	let est_gas_fee = (est_gas_usage * gas_price) as f64;
+	let est_fee_f64 = est_gas_fee * gas_token_price * platform_payment_fee_multiplier / price_denom;
+	let est_fee_u256 = parse_human_fmt_to_u256(&est_fee_f64.to_string(), coin_decimals, false)?;
+
+	Ok((est_fee_u256, required_allowance_val))
+}
+
+const PLATFORM_PAYMENT_FEE_MULTIPLIER: f64 = 1.15;
 
 /// Compute Est. fee for NC Pay.
 ///
@@ -238,31 +312,21 @@ pub fn compute_est_fee_ncw(
 
 	// 4. Define Calculation Logic (Closure to handle repetition)
 	// Returns: (Calculated Fee U256, Required allowance val)
-	let calc_snapshot = |target_amt: U256| -> eyre::Result<(U256, U256)> {
-		// NOTE: For C Pay, allowance is either 0 or MAX unlike in NC Pay.
-		let is_suff = !allowance.is_zero() && allowance.ge(&target_amt);
-
-		let (est_gas_usage, required_allowance_val) = resolve_ncw_gas_usage_and_allowance(
-			is_suff,
-			allowance,
-			target_amt,
-			approve,
-			permit_transfer_from,
-		);
-
-		// NOTE: Add platform_fee on top of network fee.
-		let platform_payment_fee_multiplier = 1.15;
-		// fee = (gas_usage * gas_price * gas_token_price) / (coin_price * 10^decimals)
-		let est_gas_fee = (est_gas_usage * gas_price) as f64;
-		let est_fee_f64 =
-			est_gas_fee * gas_token_price * platform_payment_fee_multiplier / price_denom;
-		let est_fee_u256 = parse_human_fmt_to_u256(&est_fee_f64.to_string(), coin_decimals, false)?;
-
-		Ok((est_fee_u256, required_allowance_val))
-	};
+	// NOTE: Add platform_fee on top of network fee.
 
 	// 5. Initial Calculation
-	let (mut est_fee_u256, mut required_allowance_val) = calc_snapshot(tot_amount)?;
+	let (mut est_fee_u256, mut required_allowance_val) = calc_ncw_est_fee_snapshot(
+		allowance,
+		tot_amount,
+		approve,
+		permit_transfer_from,
+		true,
+		*gas_price,
+		*gas_token_price,
+		PLATFORM_PAYMENT_FEE_MULTIPLIER,
+		price_denom,
+		coin_decimals,
+	)?;
 
 	// 6. Conditional Re-calculation (Fee-Excl. Case)
 	//
@@ -302,7 +366,18 @@ pub fn compute_est_fee_ncw(
 		}
 
 		// Check if adding the fee pushed us over the allowance threshold
-		(est_fee_u256, required_allowance_val) = calc_snapshot(tot_amount)?;
+		(est_fee_u256, required_allowance_val) = calc_ncw_est_fee_snapshot(
+			allowance,
+			tot_amount,
+			approve,
+			permit_transfer_from,
+			true,
+			*gas_price,
+			*gas_token_price,
+			PLATFORM_PAYMENT_FEE_MULTIPLIER,
+			price_denom,
+			coin_decimals,
+		)?;
 	}
 
 	// 7. Format Output
@@ -384,8 +459,13 @@ pub fn compute_est_fee_ncw(
 /// - Avoids incorrect fee scaling via `batch_len`. E.g. est_fee * batch_len
 /// - Mirrors single-pay correctness guarantees
 /// - Deterministic and stable after 2-pass computation (in case of fee-excl.)
+///
+/// TODO: est_fee should 📉 as batch size 📈.
+/// Test fn: `_001_test_estfee_scales_as_batch_size_increase`
+/// WARN: Currently, it's increasing.
 pub fn compute_est_fee_ncw_bulkpay(
 	chain: ChainName,
+	fee_coin: StableCoin,
 	tot_amount_per_coin: HashMap<StableCoin, U256>,
 	payments_per_coin: HashMap<StableCoin, u32>,
 	params: PreOcpValuesNcwParamsBulk,
@@ -401,7 +481,7 @@ pub fn compute_est_fee_ncw_bulkpay(
 		"Params coin entries & tot amount per coin can't exceed coins max. length"
 	);
 
-	let common_decimals = params_coin_entries
+	let max_decimals = params_coin_entries
 		.iter()
 		.map(|entry| entry.coin.decimals())
 		.max()
@@ -409,13 +489,19 @@ pub fn compute_est_fee_ncw_bulkpay(
 
 	let mut coin_entries = Vec::with_capacity(params_coin_entries.len());
 	let mut total_est_fee_u256 = U256::ZERO;
+	let gas_coin_decimals = chain.to_gas_coin().decimals() as i32;
+	let mut fee_coin_price = 0.0_f64;
 
 	for entry in params_coin_entries.iter() {
-		let coin = entry.coin;
+		let PreOcpValuesNcwParamsBulkCoin { coin, allowance, balance, coin_price } = entry;
+		let coin = *coin;
+		if coin == fee_coin {
+			fee_coin_price = *coin_price;
+		}
 		let coin_decimals = coin.decimals();
 
-		let allowance = U256::from_str(&entry.allowance).wrap_err("Failed to parse allowance")?;
-		let balance = parse_human_fmt_to_u256(&entry.balance, coin_decimals, false)
+		let allowance = U256::from_str(allowance).wrap_err("Failed to parse allowance")?;
+		let balance = parse_human_fmt_to_u256(balance, coin_decimals, false)
 			.wrap_err("Failed to parse balance")?;
 
 		let mut tot_amount = tot_amount_per_coin
@@ -431,8 +517,7 @@ pub fn compute_est_fee_ncw_bulkpay(
 
 		// fee = (gas_usage * gas_price * gas_token_price * platform_multiplier)
 		//       / (coin_price * 10^(gas_coin_decimals))
-		let gas_coin_decimals = chain.to_gas_coin().decimals() as i32;
-		let price_denom = entry.coin_price * 10f64.powi(gas_coin_decimals);
+		let price_denom = coin_price * 10f64.powi(gas_coin_decimals);
 
 		let payment_count = payments_per_coin
 			.get(&coin)
@@ -447,28 +532,18 @@ pub fn compute_est_fee_ncw_bulkpay(
 		// Hence:
 		//     total_permit_transfer_gas = permit_transfer_from * payment_count
 		let total_permit_transfer_gas = permit_transfer_from * payment_count as u128;
-		let calc_snapshot = |target_amt: U256| -> eyre::Result<(U256, U256)> {
-			let is_suff = !allowance.is_zero() && allowance.ge(&target_amt);
-
-			let (est_gas_usage, required_allowance_val) = resolve_ncw_gas_usage_and_allowance(
-				is_suff,
-				allowance,
-				target_amt,
-				approve,
-				total_permit_transfer_gas,
-			);
-
-			let platform_payment_fee_multiplier = 1.15;
-			let est_gas_fee = (est_gas_usage * gas_price) as f64;
-			let est_fee_f64 =
-				est_gas_fee * gas_token_price * platform_payment_fee_multiplier / price_denom;
-			let est_fee_u256 =
-				parse_human_fmt_to_u256(&est_fee_f64.to_string(), coin_decimals, false)?;
-
-			Ok((est_fee_u256, required_allowance_val))
-		};
-
-		let (mut est_fee_u256, mut required_allowance_val) = calc_snapshot(tot_amount)?;
+		let (mut est_fee_u256, mut required_allowance_val) = calc_ncw_est_fee_snapshot(
+			allowance,
+			tot_amount,
+			approve,
+			total_permit_transfer_gas,
+			false,
+			gas_price,
+			gas_token_price,
+			PLATFORM_PAYMENT_FEE_MULTIPLIER,
+			price_denom,
+			coin_decimals,
+		)?;
 
 		// Same reasoning as single-pay:
 		// for fee-excl, total spend becomes amount + est_fee, which can change allowance
@@ -480,17 +555,28 @@ pub fn compute_est_fee_ncw_bulkpay(
 				return Err(UfiError::InsufficientBalance.into())
 			}
 
-			(est_fee_u256, required_allowance_val) = calc_snapshot(tot_amount)?;
+			(est_fee_u256, required_allowance_val) = calc_ncw_est_fee_snapshot(
+				allowance,
+				tot_amount,
+				approve,
+				total_permit_transfer_gas,
+				false,
+				gas_price,
+				gas_token_price,
+				PLATFORM_PAYMENT_FEE_MULTIPLIER,
+				price_denom,
+				coin_decimals,
+			)?;
 		}
 
-		let normalized_est_fee_u256 = if coin_decimals == common_decimals {
-			est_fee_u256
-		} else {
-			let scale = U256::from(10).pow(U256::from((common_decimals - coin_decimals) as u32));
-			est_fee_u256
-				.checked_mul(scale)
-				.ok_or_eyre("Overflow while normalizing bulk-pay estimated fee")?
-		};
+		// est_fee directly not added as there could be mixed decimals related issue. So, we
+		// normalize by scaling to 10^remaining (e.g. 18-6 = 12), if required.
+		let normalized_est_fee_u256 = normalize_est_fee_u256(
+			est_fee_u256,
+			coin_decimals,
+			max_decimals,
+			"bulk-pay estimated fee",
+		)?;
 
 		total_est_fee_u256 = total_est_fee_u256
 			.checked_add(normalized_est_fee_u256)
@@ -503,7 +589,26 @@ pub fn compute_est_fee_ncw_bulkpay(
 		});
 	}
 
-	let est_fee = fmt_output(total_est_fee_u256, common_decimals)?;
+	ensure!(fee_coin_price > 0.0, "Missing fee coin price for bulk-pay fee estimation");
+
+	// add 50k gas extra based on fee payment to admin.
+	let fee_coin_decimals = fee_coin.decimals();
+	let est_gas_fee = (50_000 * gas_price) as f64;
+	let price_denom = fee_coin_price * 10f64.powi(gas_coin_decimals);
+	let est_fee_f64 = est_gas_fee * gas_token_price * PLATFORM_PAYMENT_FEE_MULTIPLIER / price_denom;
+	let est_fee_u256 = parse_human_fmt_to_u256(&est_fee_f64.to_string(), fee_coin_decimals, false)?;
+	let normalized_est_fee_u256 = normalize_est_fee_u256(
+		est_fee_u256,
+		fee_coin_decimals,
+		max_decimals,
+		"bulk-pay admin estimated fee",
+	)?;
+	total_est_fee_u256 += normalized_est_fee_u256;
+
+	let total_est_fee_in_fee_coin_decimals =
+		denormalize_est_fee_u256(total_est_fee_u256, max_decimals, fee_coin_decimals)?;
+
+	let est_fee = fmt_output(total_est_fee_in_fee_coin_decimals, fee_coin_decimals)?;
 
 	Ok(PreOcpValuesNcwBulk { coin_entries, est_fee })
 }
@@ -754,7 +859,7 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn req_allowance_tests() {
+	fn test_req_allowance() {
 		// Test with USDT token
 		assert_eq!(
 			update_req_allowance("1", StableCoin::USDT, "0", "0.112192", false).unwrap(),
@@ -774,5 +879,47 @@ mod tests {
 			update_req_allowance("1", StableCoin::DAI, "0", "0.112192", true).unwrap(),
 			"11.000000000000000000"
 		);
+	}
+
+	mod denormalize_est_fee_u256_tests {
+		use super::*;
+
+		#[test]
+		// fn test_denormalize_est_fee_u256_same_decimals_keeps_value_unchanged() {
+		fn same_decimals_keeps_value_unchanged() {
+			let value = parse_human_fmt_to_u256("0.025762145346208266", 18, false).unwrap();
+
+			assert_eq!(denormalize_est_fee_u256(value, 18, 18).unwrap(), value);
+			assert_eq!(fmt_output(value, 18).unwrap(), "0.025762145346208266");
+		}
+
+		#[test]
+		fn from_18_to_6_truncates_for_display() {
+			let value_18 = parse_human_fmt_to_u256("0.050494861262689543", 18, false).unwrap();
+			let value_6 = denormalize_est_fee_u256(value_18, 18, 6).unwrap();
+
+			assert_eq!(fmt_output(value_18, 18).unwrap(), "0.050494861262689543");
+			assert_eq!(value_6, U256::from(50_494_u128));
+			assert_eq!(fmt_output(value_6, 6).unwrap(), "0.050494");
+		}
+
+		#[test]
+		fn bulkpay_examples_match_fee_coin_decimals() {
+			let cases = [
+				("0.025762145346208266", 18_u8, "0.025762145346208266"),
+				("0.050494861262689543", 6_u8, "0.050494"),
+				("0.075226291894034316", 6_u8, "0.075226"),
+				("0.099961153156723860", 6_u8, "0.099961"),
+				("0.130874728533468004", 6_u8, "0.130874"),
+			];
+
+			for (raw_est_fee, fee_coin_decimals, expected_display) in cases {
+				let value_18 = parse_human_fmt_to_u256(raw_est_fee, 18, false).unwrap();
+				let denormalized =
+					denormalize_est_fee_u256(value_18, 18, fee_coin_decimals).unwrap();
+
+				assert_eq!(fmt_output(denormalized, fee_coin_decimals).unwrap(), expected_display);
+			}
+		}
 	}
 }
