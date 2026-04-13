@@ -111,13 +111,13 @@ fn resolve_ncw_gas_usage_and_allowance(
 fn normalize_est_fee_u256(
 	est_fee_u256: U256,
 	from_decimals: u8,
-	max_decimals: u8,
+	to_decimals: u8,
 	context: &str,
 ) -> eyre::Result<U256> {
-	let val = if from_decimals == max_decimals {
+	let val = if from_decimals == to_decimals {
 		est_fee_u256
 	} else {
-		let scale = U256::from(10).pow(U256::from((max_decimals - from_decimals) as u32));
+		let scale = U256::from(10).pow(U256::from((to_decimals - from_decimals) as u32));
 		est_fee_u256
 			.checked_mul(scale)
 			.ok_or_eyre(format!("Overflow while normalizing {context}"))?
