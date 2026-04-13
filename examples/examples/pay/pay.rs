@@ -71,7 +71,7 @@ async fn main() -> eyre::Result<()> {
 				.bold()
 		);
 	}
-	if validate_and_parse_amount(amount, selected_coin, &net_balance, &est_fee, is_fee_incl)
+	if validate_and_parse_amount(amount, selected_coin, &net_balance, &est_fee, is_fee_incl, true)
 		.is_err()
 	{
 		println!(

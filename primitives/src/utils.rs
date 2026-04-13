@@ -41,8 +41,9 @@ pub fn sanitize_address(address: &str) -> bool {
 ///
 /// ## Arguments
 /// - use_in_ui:
-///   - `false`: for precision during math calculation, value might be much bigger than coin
-///     decimals.
+///   - `false`: If values' decimals > coin_decimals, we skip error & instead curtail the decimals
+///     to that of coin_decimals. E.g. value: `1.123456789012345678` => `1.123456` => `1123456` (in
+///     U256).
 ///   - `true`: Usage inside web app, to show err when value's decimals > coin_decimals.
 pub fn parse_human_fmt_to_u256(
 	value: &str,
@@ -623,8 +624,12 @@ pub fn total_spend(
 /// - In base layer, OCP for sanitizing input
 /// - In SDK layer, OCP for sanitizing input using `sanitize_and_parse_amount.is_ok()` if value not
 ///   required. Ideally we need the value in U256 to compare with fetched balance & est fees.
-pub fn sanitize_and_parse_amount(amount: &str, coin: StableCoin) -> eyre::Result<U256> {
-	let amount_u256 = parse_human_fmt_to_u256(amount, coin.decimals(), true)?;
+pub fn sanitize_and_parse_amount(
+	amount: &str,
+	coin: StableCoin,
+	use_in_ui: bool,
+) -> eyre::Result<U256> {
+	let amount_u256 = parse_human_fmt_to_u256(amount, coin.decimals(), use_in_ui)?;
 	ensure!(!amount_u256.is_zero(), UfiError::ZeroAmount);
 	Ok(amount_u256)
 }
@@ -650,8 +655,9 @@ pub fn validate_and_parse_amount(
 	balance: &str,
 	est_fee: &str,
 	is_fee_incl: bool,
+	use_in_ui: bool,
 ) -> eyre::Result<()> {
-	let amount_u256 = sanitize_and_parse_amount(amount, coin)?;
+	let amount_u256 = sanitize_and_parse_amount(amount, coin, use_in_ui)?;
 	let balance_u256: U256 = parse_units(balance, coin.decimals())?.into();
 	let est_fee_u256: U256 = parse_units(est_fee, coin.decimals())?.into();
 

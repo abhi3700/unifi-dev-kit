@@ -1038,10 +1038,10 @@ impl PayOnchainPayload {
 	/// - to_addr
 	/// - amount
 	#[cfg(feature = "utils")]
-	pub fn is_sanitized(&self) -> (bool, Option<Address>, Option<U256>) {
+	pub fn is_sanitized(&self, use_in_ui: bool) -> (bool, Option<Address>, Option<U256>) {
 		let to_addr = self.to_address.parse::<Address>().ok();
 		let is_san_addr = to_addr.is_some();
-		let parsed_amount = sanitize_and_parse_amount(&self.amount, self.coin).ok();
+		let parsed_amount = sanitize_and_parse_amount(&self.amount, self.coin, use_in_ui).ok();
 		let is_san_amt = parsed_amount.is_some();
 
 		(is_san_addr && is_san_amt, to_addr, parsed_amount)
@@ -1102,8 +1102,8 @@ impl ScheduledPayOnchainPayload {
 	///   - if `amount.is_some()` -> sanitized.
 	/// - execute
 	#[cfg(feature = "utils")]
-	pub fn is_sanitized(&self) -> (bool, Option<Address>, Option<U256>, bool) {
-		let (is_san_payload, to_addr, amount) = self.payload.is_sanitized();
+	pub fn is_sanitized(&self, use_in_ui: bool) -> (bool, Option<Address>, Option<U256>, bool) {
+		let (is_san_payload, to_addr, amount) = self.payload.is_sanitized(use_in_ui);
 
 		let now = now_timestamp_secs() as i64;
 		let is_san_execute = self.execute_at > now + Self::MIN_SCHEDULED_DURATION &&
