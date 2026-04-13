@@ -398,9 +398,7 @@ pub fn compute_est_fee_ncw(
 /// - **Per-coin allowance evaluation**: Each coin is evaluated independently for allowance
 ///   sufficiency:
 ///
-///   ```
 ///   allowance >= total_spend_for_that_coin
-///   ```
 ///
 ///   This determines whether the gas pathincludes `approve` or not.
 ///
@@ -429,9 +427,8 @@ pub fn compute_est_fee_ncw(
 /// - `chain`: selected chain
 /// - `tot_amount_per_coin`: Aggregated total amount per coin across the batch
 ///
-///   ```
-///   USDT → sum(all USDT entries) USDC → sum(all USDC entries)
-///   ```
+///   USDT → sum(all USDT entries)
+///   USDC → sum(all USDC entries)
 ///
 /// - `params`: pre-fetched values from `prefetch_ncw_balance_fee_params_bulkpay`
 /// - `is_fee_incl`: whether amount already includes fee

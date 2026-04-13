@@ -4,6 +4,9 @@ description = "Official Rust SDK primitives for UniFi"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+doctest = false
+
 [dependencies]
 alloy-contract = { version = "1.4.1"}
 alloy-primitives = { version = "1.4.1"}
