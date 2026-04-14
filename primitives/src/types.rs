@@ -10,7 +10,7 @@ use bson::{
 };
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, str::FromStr};
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 /// Modes for running in diff. cases
 ///
@@ -921,17 +921,16 @@ pub struct PreOcpValuesNcw {
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValuesNcwBulk {
 	/// For each coin (unique)
-	pub coin_entries: Vec<PreOcpValuesNcwBulkCoin>,
+	pub coin_entries: HashMap<StableCoin, PreOcpValuesNcwBulkCoin>,
 	/// Total est. fee \
 	/// Est. fee is formatted. E.g. "1.23243" USDT
 	/// ### Usage
 	/// - display in UI
-	pub est_fee: String,
+	pub tot_est_fee: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValuesNcwBulkCoin {
-	pub coin: StableCoin,
 	/// Is coin allowance sufficient?
 	/// NOTE: This field is redundant. But for direct use, added this field. Else, we have to
 	/// convert required_allowance to U256 to check if it's zero.
