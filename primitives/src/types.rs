@@ -184,12 +184,12 @@ impl ChainName {
 		// NOTE: currently, every token is ERC20 with same code. So, the gas estimate kept same.
 		// TODO: Reduce the gas limit for `approve` and `transfer_from` later on depending on
 		// the bulk users' data.
-		let est_gas = GasEstimate {
+		GasEstimate {
 			eth_transfer: 21_000,
 			approve: 100_000,
 			transfer_from: 80_000,
 			permit_transfer_from: 120_000,
-		};
+		}
 		// use StableCoin as S;
 		// match (coin, self) {
 		// 	(S::USDT, Self::Ethereum) => est_gas,
@@ -205,7 +205,6 @@ impl ChainName {
 		// 	(S::USDC, Self::Anvil) => est_gas,
 		// 	(S::DAI, Self::Anvil) => est_gas,
 		// }
-		est_gas
 	}
 
 	/// Get Permit2 Contract address for supported chain

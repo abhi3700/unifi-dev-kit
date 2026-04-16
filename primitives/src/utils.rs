@@ -215,6 +215,7 @@ fn denormalize_est_fee_u256(
 	}
 }
 
+#[allow(clippy::too_many_arguments)]
 fn calc_ncw_est_fee_snapshot(
 	allowance: U256,
 	target_amt: U256,
@@ -499,7 +500,7 @@ pub fn compute_est_fee_ncw(
 ///   This is critical because:
 ///   - some coins may require approval
 ///   - others may not
-///   → resulting in different gas usage per coin
+///   - resulting in different gas usage per coin
 ///
 /// ## Arguments
 /// - `chain`: selected chain

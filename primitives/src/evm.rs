@@ -64,13 +64,13 @@ pub fn normalized_signature_variants(rs64: [u8; 64]) -> eyre::Result<Vec<([u8; 6
 	let sig = Signature::from_slice(&rs64)?;
 	let mut variants = vec![(rs64, false)];
 
-	if sig.s().is_high().into() {
-		if let Some(normalized) = sig.normalize_s() {
-			let mut norm_rs64 = [0u8; 64];
-			norm_rs64[..32].copy_from_slice(&normalized.r().to_bytes());
-			norm_rs64[32..].copy_from_slice(&normalized.s().to_bytes());
-			variants.push((norm_rs64, true));
-		}
+	if sig.s().is_high().into() &&
+		let Some(normalized) = sig.normalize_s()
+	{
+		let mut norm_rs64 = [0u8; 64];
+		norm_rs64[..32].copy_from_slice(&normalized.r().to_bytes());
+		norm_rs64[32..].copy_from_slice(&normalized.s().to_bytes());
+		variants.push((norm_rs64, true));
 	}
 
 	Ok(variants)
