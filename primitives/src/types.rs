@@ -810,6 +810,31 @@ impl ApiPlan {
 			D::Year => monthly_quota * 12,
 		}
 	}
+
+	/// Returns the total image credits quota for the selected API plan for duration.
+	///
+	/// This value represents the maximum credits allocated for a user
+	/// based on their plan. The `credits_left` field in `UserDocument`
+	/// will be decremented from this total as API usage occurs.
+	pub fn img_credit_quota(&self, duration: PaidPlanDuration) -> i64 {
+		use ApiPlan as A;
+		use PaidPlanDuration as D;
+
+		let monthly_quota = match self {
+			A::Free => 3,
+			A::Starter => 500,
+			A::Growth => 3_000,
+			A::Scale => 15_000,
+			A::Enterprise => 100_000,
+		};
+
+		match duration {
+			D::Month => monthly_quota,
+			D::Quarter => monthly_quota * 4,
+			D::HalfYear => monthly_quota * 6,
+			D::Year => monthly_quota * 12,
+		}
+	}
 }
 
 #[derive(
@@ -1241,6 +1266,7 @@ pub struct Api {
 pub struct ApiMetadata {
 	pub plan: ApiPlan,
 	pub credits: i64,
+	pub img_credits: i64,
 	/// When the plan purchased or renewed, the expiry timestamp is set. For instance, plan is
 	/// for a year. Then, expiry timestamp is set accordingly. By default, set for month for Free
 	/// plan.
@@ -1255,6 +1281,7 @@ impl Default for ApiMetadata {
 		Self {
 			plan,
 			credits: plan.credit_quota(duration),
+			img_credits: plan.img_credit_quota(duration),
 			expiry_at: now_timestamp_secs() as i64 + duration.to_seconds(),
 		}
 	}
@@ -1345,4 +1372,10 @@ pub struct ScheduledPaymentsFilter {
 	/// Default: 60.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub limit: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractPaymentsRequest {
+	pub img_bytes: Vec<u8>,
+	pub memo: Memo,
 }
