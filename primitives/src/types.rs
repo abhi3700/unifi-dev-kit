@@ -785,7 +785,7 @@ impl ApiPlan {
 		self.eq(&ApiPlan::Free)
 	}
 
-	/// Returns the total credits quota for the selected API plan for duration.
+	/// Returns the total credits quota/limit for the selected API plan for duration.
 	///
 	/// This value represents the maximum credits allocated for a user
 	/// based on their plan. The `credits_left` field in `UserDocument`
@@ -1265,6 +1265,7 @@ pub struct Api {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct ApiMetadata {
 	pub plan: ApiPlan,
+	pub duration: PaidPlanDuration,
 	pub credits: i64,
 	pub img_credits: i64,
 	/// When the plan purchased or renewed, the expiry timestamp is set. For instance, plan is
@@ -1280,6 +1281,7 @@ impl Default for ApiMetadata {
 		let duration = PaidPlanDuration::Month;
 		Self {
 			plan,
+			duration,
 			credits: plan.credit_quota(duration),
 			img_credits: plan.img_credit_quota(duration),
 			expiry_at: now_timestamp_secs() as i64 + duration.to_seconds(),
