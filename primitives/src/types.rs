@@ -1369,6 +1369,16 @@ pub struct SchedulePaymentsRequest {
 	pub payments: Vec<ScheduledPayOnchainPayload>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct IdsRequest {
+	pub ids: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GetScheduledPaymentsByIdsResponse {
+	pub payments: Vec<ScheduledPayOnchainPayload>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Default, Clone, Copy, PartialEq)]
 pub struct ScheduledPaymentsFilter {
 	/// - None: ignore
