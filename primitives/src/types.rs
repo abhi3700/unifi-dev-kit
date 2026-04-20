@@ -1364,6 +1364,11 @@ impl Session {
 	}
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SchedulePaymentsRequest {
+	pub payments: Vec<ScheduledPayOnchainPayload>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Default, Clone, Copy, PartialEq)]
 pub struct ScheduledPaymentsFilter {
 	/// - None: ignore
