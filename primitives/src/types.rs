@@ -179,32 +179,39 @@ impl ChainName {
 	/// Get the gas limit (max. feasible for prediction so that the actual gas consumed is lower
 	/// than the predicted) of all the used functions (in onchain payment) for a given
 	/// coin. Although all the ERC20 tokens have same gas usage irrespective of chains. But, just
-	/// in case.
-	pub fn get_gas_usage_limit(&self, _coin: StableCoin) -> GasEstimate {
+	/// in case. That's why used [`Option`] type for coin. In future, based on stats we might have
+	/// diff. gas values for (chain, coin) combo.
+	pub fn get_gas_usage_limit(&self, coin: Option<StableCoin>) -> GasEstimate {
 		// NOTE: currently, every token is ERC20 with same code. So, the gas estimate kept same.
 		// TODO: Reduce the gas limit for `approve` and `transfer_from` later on depending on
 		// the bulk users' data.
-		GasEstimate {
+
+		let est_gas = GasEstimate {
 			eth_transfer: 21_000,
 			approve: 100_000,
 			transfer_from: 80_000,
 			permit_transfer_from: 120_000,
+		};
+
+		if let Some(coin) = coin {
+			use StableCoin as S;
+			match (coin, self) {
+				(S::USDT, Self::Ethereum) => est_gas,
+				(S::USDC, Self::Ethereum) => est_gas,
+				(S::DAI, Self::Ethereum) => est_gas,
+				(S::USDT, Self::Polygon) => est_gas,
+				(S::USDC, Self::Polygon) => est_gas,
+				(S::DAI, Self::Polygon) => est_gas,
+				(S::USDT, Self::Sepolia) => est_gas,
+				(S::USDC, Self::Sepolia) => est_gas,
+				(S::DAI, Self::Sepolia) => est_gas,
+				(S::USDT, Self::Anvil) => est_gas,
+				(S::USDC, Self::Anvil) => est_gas,
+				(S::DAI, Self::Anvil) => est_gas,
+			}
+		} else {
+			est_gas
 		}
-		// use StableCoin as S;
-		// match (coin, self) {
-		// 	(S::USDT, Self::Ethereum) => est_gas,
-		// 	(S::USDC, Self::Ethereum) => est_gas,
-		// 	(S::DAI, Self::Ethereum) => est_gas,
-		// 	(S::USDT, Self::Polygon) => est_gas,
-		// 	(S::USDC, Self::Polygon) => est_gas,
-		// 	(S::DAI, Self::Polygon) => est_gas,
-		// 	(S::USDT, Self::Sepolia) => est_gas,
-		// 	(S::USDC, Self::Sepolia) => est_gas,
-		// 	(S::DAI, Self::Sepolia) => est_gas,
-		// 	(S::USDT, Self::Anvil) => est_gas,
-		// 	(S::USDC, Self::Anvil) => est_gas,
-		// 	(S::DAI, Self::Anvil) => est_gas,
-		// }
 	}
 
 	/// Get Permit2 Contract address for supported chain

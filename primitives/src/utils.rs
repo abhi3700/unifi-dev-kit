@@ -382,7 +382,7 @@ pub fn compute_est_fee_ncw(
 	}
 
 	// 3. Pre-calculate Constants
-	let GasEstimate { approve, permit_transfer_from, .. } = chain.get_gas_usage_limit(coin);
+	let GasEstimate { approve, permit_transfer_from, .. } = chain.get_gas_usage_limit(None);
 
 	// Optimization: Calculate price denominator once.
 	// Formula: coin_price * 10^(gas_coin_decimals)
@@ -589,7 +589,7 @@ pub fn compute_est_fee_ncw_bulkpay(
 			return Err(UfiError::InsufficientBalance.into())
 		}
 
-		let GasEstimate { approve, permit_transfer_from, .. } = chain.get_gas_usage_limit(coin);
+		let GasEstimate { approve, permit_transfer_from, .. } = chain.get_gas_usage_limit(None);
 
 		// fee = (gas_usage * gas_price * gas_token_price * platform_multiplier)
 		//       / (coin_price * 10^(gas_coin_decimals))
