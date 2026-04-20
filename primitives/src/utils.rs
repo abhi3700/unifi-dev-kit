@@ -1,9 +1,9 @@
 use crate::{
 	errors::UfiError,
 	types::{
-		ChainName, GasEstimate, PreOcpPayload, PreOcpValuesNcwBulk, PreOcpValuesNcwBulkCoin,
+		ChainName, GasEstimate, PreOcpPayload, PreOcpValuesNcwAllowance, PreOcpValuesNcwBulk,
 		PreOcpValuesNcwParams, PreOcpValuesNcwParamsBulk, PreOcpValuesNcwParamsBulkCoin,
-		StableCoin,
+		PreOcpValuesNcwSingleCoin, StableCoin,
 	},
 };
 use alloy_primitives::{
@@ -347,6 +347,7 @@ const PLATFORM_PAYMENT_FEE_MULTIPLIER: f64 = 1.15;
 ///   - false → insufficient, prompt: "Please approve X amount".
 /// - required_allowance: X value is to be approved by payer to Permit2. E.g. `21.34545` USDT or
 ///   "0.00" USDT.
+/// - is MAX allowance
 /// - formatted est fees. E.g. `0.132433` USDT or "0.00" USDT.
 pub fn compute_est_fee_ncw(
 	payload: PreOcpPayload,
@@ -354,7 +355,7 @@ pub fn compute_est_fee_ncw(
 	pre_ocp_values: &PreOcpValuesNcwParams,
 	is_fee_incl: bool,
 	use_in_ui: bool,
-) -> eyre::Result<(bool, String, String)> {
+) -> eyre::Result<(bool, String, bool, String)> {
 	// 1. Destructure and Parse Inputs immediately
 	let PreOcpPayload { coin, chain } = payload;
 	let PreOcpValuesNcwParams {
@@ -464,7 +465,7 @@ pub fn compute_est_fee_ncw(
 	let required_allowance_val_fmt = fmt_output(required_allowance_val, coin_decimals)?;
 	let est_fee_fmt = fmt_output(est_fee_u256, coin_decimals)?;
 
-	Ok((is_suff, required_allowance_val_fmt, est_fee_fmt))
+	Ok((is_suff, required_allowance_val_fmt, allowance == U256::MAX, est_fee_fmt))
 }
 
 /// Compute estimated fee for NC **Bulk Pay** across multiple coins.
@@ -644,9 +645,12 @@ pub fn compute_est_fee_ncw_bulkpay(
 
 		coin_entries.insert(
 			coin,
-			PreOcpValuesNcwBulkCoin {
-				is_suff: required_allowance_val.is_zero(),
-				required_allowance: fmt_output(required_allowance_val, coin_decimals)?,
+			PreOcpValuesNcwSingleCoin {
+				allowance: PreOcpValuesNcwAllowance {
+					is_suff: required_allowance_val.is_zero(),
+					required_allowance: fmt_output(required_allowance_val, coin_decimals)?,
+					is_max_allowance: allowance == U256::MAX,
+				},
 				balance: entry.balance.to_owned(),
 			},
 		);
@@ -672,8 +676,8 @@ pub fn compute_est_fee_ncw_bulkpay(
 			"Internal error: fee coin {:?} not found in coin_entries during bulk fee computation",
 			fee_coin
 		))?;
-		entry.is_suff = required_allowance_val.is_zero();
-		entry.required_allowance = required_allowance;
+		entry.allowance.is_suff = required_allowance_val.is_zero();
+		entry.allowance.required_allowance = required_allowance;
 	}
 
 	let total_est_fee_in_fee_coin_decimals =

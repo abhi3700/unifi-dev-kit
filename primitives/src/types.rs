@@ -929,14 +929,7 @@ pub struct PreOcpValues {
 /// Pre-OCP Values using NCW Params (for calc) for single pay.
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValuesNcw {
-	/// Is coin allowance sufficient?
-	/// NOTE: This field is redundant. But for direct use, added this field. Else, we have to
-	/// convert required_allowance to U256 to check if it's zero.
-	pub is_suff: bool,
-	/// User need to approve this value. E.g. "3.354343" USDT
-	/// ### Usage
-	/// - show as formatted in toast in UI.
-	pub required_allowance: String,
+	pub allowance: PreOcpValuesNcwAllowance,
 	/// Balance is formatted. E.g. "243.354343" USDT
 	/// ### Usage
 	/// - display in UI
@@ -952,7 +945,7 @@ pub struct PreOcpValuesNcw {
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValuesNcwBulk {
 	/// For each coin (unique)
-	pub coin_entries: HashMap<StableCoin, PreOcpValuesNcwBulkCoin>,
+	pub coin_entries: HashMap<StableCoin, PreOcpValuesNcwSingleCoin>,
 	/// Total est. fee \
 	/// Est. fee is formatted. E.g. "1.23243" USDT
 	/// ### Usage
@@ -960,8 +953,20 @@ pub struct PreOcpValuesNcwBulk {
 	pub tot_est_fee: String,
 }
 
+/// PreOcpValuesNcw for single coin
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
-pub struct PreOcpValuesNcwBulkCoin {
+pub struct PreOcpValuesNcwSingleCoin {
+	pub allowance: PreOcpValuesNcwAllowance,
+	/// Balance is formatted. E.g. "243.354343" USDT
+	/// ### Usage
+	/// - display in UI
+	/// - compare with amount for err.
+	pub balance: String,
+}
+
+/// PreOcpValuesNcwAllowance for single coin
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+pub struct PreOcpValuesNcwAllowance {
 	/// Is coin allowance sufficient?
 	/// NOTE: This field is redundant. But for direct use, added this field. Else, we have to
 	/// convert required_allowance to U256 to check if it's zero.
@@ -970,11 +975,10 @@ pub struct PreOcpValuesNcwBulkCoin {
 	/// ### Usage
 	/// - show as formatted in toast in UI.
 	pub required_allowance: String,
-	/// Balance is formatted. E.g. "243.354343" USDT
-	/// ### Usage
-	/// - display in UI
-	/// - compare with amount for err.
-	pub balance: String,
+	/// Is MAX. allowance
+	///
+	/// Used for Falcon.
+	pub is_max_allowance: bool,
 }
 
 /// Pre-OCP Values for NCW Params for single pay
@@ -1173,7 +1177,9 @@ pub enum PaymentRecurrence {
 pub struct GetScheduledPaymentsResponse {
 	pub payments: Vec<ScheduledPayOnchainPayload>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub est_fee: Option<String>,
+	pub pre_ocp_values_single: Option<PreOcpValuesNcw>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub pre_ocp_values_bulk: Option<PreOcpValuesNcwBulk>,
 }
 
 /* Platform */
