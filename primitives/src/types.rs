@@ -1173,7 +1173,7 @@ pub enum PaymentRecurrence {
 	Custom(i64),
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
 pub struct GetScheduledPaymentsResponse {
 	pub payments: Vec<ScheduledPayOnchainPayload>,
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -1374,7 +1374,12 @@ pub struct IdsRequest {
 	pub ids: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+pub struct IdsResponse {
+	pub ids: Vec<String>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct GetScheduledPaymentsByIdsResponse {
 	pub payments: Vec<ScheduledPayOnchainPayload>,
 }
