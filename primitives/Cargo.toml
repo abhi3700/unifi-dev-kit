@@ -8,9 +8,9 @@ edition = "2024"
 doctest = false
 
 [dependencies]
-alloy-contract = { version = "1.4.1"}
-alloy-primitives = { version = "1.4.1"}
-alloy-sol-types = { version = "1.4.1", features = ["eip712-serde", "json"], optional = true}
+alloy-contract = { version = "2.0.0"}
+alloy-primitives = { version = "1.5.7"}
+alloy-sol-types = { version = "1.5.7", features = ["eip712-serde", "json"], optional = true}
 bson = { version = "2.14.0", default-features = false}
 chrono = {version = "0.4.40", optional = true}
 eyre = "0.6.12"
