@@ -1,6 +1,6 @@
-use crate::errors::UfiError;
 #[cfg(feature = "utils")]
 use crate::utils::{now_timestamp_secs, sanitize_and_parse_amount};
+use crate::{errors::UfiError, utils::parse_human_fmt_to_u256};
 #[cfg(feature = "utils")]
 use alloy_primitives::U256;
 use alloy_primitives::{Address, address};
@@ -8,6 +8,7 @@ use bson::{
 	Bson::{self, Document as BsonDocument},
 	doc,
 };
+use eyre::OptionExt;
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display, str::FromStr};
@@ -941,6 +942,31 @@ pub struct PreOcpValuesNcw {
 	pub est_fee: String,
 }
 
+impl PreOcpValuesNcw {
+	pub fn tot_amt_w_fee(&self, amount: &str, coin: StableCoin) -> eyre::Result<U256> {
+		let coin_decimals = coin.decimals();
+		let amount = parse_human_fmt_to_u256(amount, coin_decimals, false)?;
+		let est_fee = parse_human_fmt_to_u256(&self.est_fee, coin_decimals, false)?;
+
+		Ok(amount + est_fee)
+	}
+
+	pub fn ensure_balance_and_collect_approval_coin(
+		&self,
+		sched_amount: &str,
+		coin: StableCoin,
+		coins_for_approval: &mut Vec<StableCoin>,
+	) -> eyre::Result<()> {
+		let tot_amt_w_fee = self.tot_amt_w_fee(sched_amount, coin)?;
+		let balance = parse_human_fmt_to_u256(&self.balance, coin.decimals(), false)?;
+		eyre::ensure!(balance.ge(&tot_amt_w_fee), "Insufficient balance for {coin}");
+		if !self.allowance.is_suff && !self.allowance.is_max_allowance {
+			coins_for_approval.push(coin);
+		}
+		Ok(())
+	}
+}
+
 /// Pre-OCP Values using NCW Params (for calc) for bulk pay.
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValuesNcwBulk {
@@ -951,6 +977,54 @@ pub struct PreOcpValuesNcwBulk {
 	/// ### Usage
 	/// - display in UI
 	pub tot_est_fee: String,
+}
+
+impl PreOcpValuesNcwBulk {
+	pub fn tot_amt_w_fee(
+		&self,
+		sched_payments: &[ScheduledPayOnchainPayload],
+	) -> eyre::Result<HashMap<StableCoin, U256>> {
+		let mut tot_amount_w_fee: HashMap<StableCoin, U256> =
+			HashMap::with_capacity(StableCoin::all().len());
+
+		for sched_payment in sched_payments {
+			let coin = sched_payment.coin();
+			let amount = parse_human_fmt_to_u256(sched_payment.amount(), coin.decimals(), false)?;
+
+			let total = tot_amount_w_fee.entry(coin).or_insert(U256::ZERO);
+			*total += amount;
+		}
+
+		let fee_coin = sched_payments.last().ok_or_eyre("Failed to find the fee coin.")?.coin();
+		let tot_est_fee = parse_human_fmt_to_u256(&self.tot_est_fee, fee_coin.decimals(), false)?;
+
+		let fee_coin_total = tot_amount_w_fee.entry(fee_coin).or_insert(U256::ZERO);
+		*fee_coin_total += tot_est_fee;
+
+		Ok(tot_amount_w_fee)
+	}
+
+	pub fn ensure_balance_and_collect_approval_coin(
+		&self,
+		sched_payments: &[ScheduledPayOnchainPayload],
+		coins_for_approval: &mut Vec<StableCoin>,
+	) -> eyre::Result<()> {
+		let tot_amount_w_fee = self.tot_amt_w_fee(sched_payments)?;
+		for (&coin, &tot_amt_w_fee) in tot_amount_w_fee.iter() {
+			let coin_entry = self
+				.coin_entries
+				.get(&coin)
+				.ok_or_eyre(format!("Failed to find pre-OCP values for coin: {}", coin))?;
+
+			let balance = parse_human_fmt_to_u256(&coin_entry.balance, coin.decimals(), false)?;
+			eyre::ensure!(balance.ge(&tot_amt_w_fee), "Insufficient balance for {coin}");
+
+			if !coin_entry.allowance.is_suff && !coin_entry.allowance.is_max_allowance {
+				coins_for_approval.push(coin);
+			}
+		}
+		Ok(())
+	}
 }
 
 /// PreOcpValuesNcw for single coin
@@ -1094,6 +1168,7 @@ pub struct ScheduledPayOnchainPayload {
 	/// Scheduled timestamp in secs.
 	pub execute_at: i64,
 	/// If `None`, then delete after `execute_at` elapsed during `scheduled_payments_handler` fn.
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub repeat: Option<PaymentRecurrence>,
 	/// Default: true. \
 	/// ## Usage
