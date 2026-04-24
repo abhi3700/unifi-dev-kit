@@ -243,6 +243,9 @@ impl ChainName {
 	Default,
 )]
 pub enum StableCoin {
+	/// Chosen as default bcoz it has:
+	/// - highest marketcap.
+	/// - lowest decimals (6). Hence, easy for calc.
 	#[default]
 	USDT,
 	USDC,
@@ -334,6 +337,10 @@ impl StableCoin {
 			S::USDC => 6,
 			S::DAI => 18,
 		}
+	}
+
+	pub fn default_decimals() -> u8 {
+		Self::default().decimals()
 	}
 }
 
