@@ -1120,6 +1120,14 @@ pub struct PreOcpValuesNcwParamsBulkCoin {
 	pub coin_price: f64,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+pub struct PreOcpValuesNcwCouple {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub single: Option<PreOcpValuesNcw>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub bulk: Option<PreOcpValuesNcwBulk>,
+}
+
 #[derive(
 	Archive,
 	RkyvSerialize,
@@ -1257,11 +1265,9 @@ pub enum PaymentRecurrence {
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
 pub struct GetScheduledPaymentsResponse {
-	pub payments: Vec<ScheduledPayOnchainPayload>,
+	pub sched_payments: Vec<ScheduledPayOnchainPayload>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub pre_ocp_values_single: Option<PreOcpValuesNcw>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub pre_ocp_values_bulk: Option<PreOcpValuesNcwBulk>,
+	pub pre_ocp_values_ncw_couple: Option<PreOcpValuesNcwCouple>,
 }
 
 /* Platform */
