@@ -1240,6 +1240,45 @@ impl ScheduledPayOnchainPayload {
 	}
 }
 
+/// `PayOnchainPayload` w/o `chain`.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct BulkPayItem {
+	pub coin: StableCoin,
+	pub to_address: String,
+	pub amount: String,
+	pub memo: Memo,
+}
+
+impl BulkPayItem {
+	pub fn new(coin: StableCoin, to_address: &str, amount: &str, memo: &Memo) -> Self {
+		Self {
+			coin,
+			to_address: to_address.to_owned(),
+			amount: amount.to_owned(),
+			memo: memo.to_owned(),
+		}
+	}
+
+	pub fn from_scheduled_payment(sched_payment: &ScheduledPayOnchainPayload) -> Self {
+		let PayOnchainPayload { coin, to_address, amount, memo, .. } = &sched_payment.payload;
+		Self::new(*coin, to_address, amount, memo)
+	}
+
+	pub fn from_scheduled_payments(sched_payments: &[ScheduledPayOnchainPayload]) -> Vec<Self> {
+		sched_payments.iter().map(Self::from_scheduled_payment).collect()
+	}
+}
+
+impl CoinAmountLike for BulkPayItem {
+	fn coin(&self) -> StableCoin {
+		self.coin
+	}
+
+	fn amount(&self) -> &str {
+		&self.amount
+	}
+}
+
 pub trait CoinAmountLike {
 	fn coin(&self) -> StableCoin;
 	fn amount(&self) -> &str;
