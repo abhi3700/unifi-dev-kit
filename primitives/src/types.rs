@@ -1174,6 +1174,13 @@ impl PayOnchainPayload {
 	}
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ScheduledPayOnchainPayloadId {
+	pub id: String,
+	#[serde(flatten)]
+	pub sched: ScheduledPayOnchainPayload,
+}
+
 /// Currently, it's stored forever if repeat -> true, else when execute_at is done, we delete.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ScheduledPayOnchainPayload {
@@ -1294,16 +1301,36 @@ impl CoinAmountLike for ScheduledPayOnchainPayload {
 	}
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
 pub enum PaymentRecurrence {
 	Daily,
 	Weekly,
 	Monthly,
+	/// in seconds
 	Custom(i64),
+}
+
+impl PaymentRecurrence {
+	pub fn to_seconds(&self) -> i64 {
+		use PaymentRecurrence as P;
+
+		match self {
+			P::Daily => 86_400,
+			P::Weekly => 7 * 86_400,
+			P::Monthly => 30 * 86_400,
+			P::Custom(seconds) => *seconds,
+		}
+	}
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
 pub struct GetScheduledPaymentsResponse {
+	/// This means the ids are repeatable. Hence, the execute dates need to be modified after
+	/// successful payment.
+	pub repeat_ids: Vec<String>,
+	/// This means the ids are non-repeatable. Hence, these needs to be deleted after successful
+	/// payment.
+	pub non_repeat_ids: Vec<String>,
 	pub sched_payments: Vec<ScheduledPayOnchainPayload>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub pre_ocp_values_ncw_couple: Option<PreOcpValuesNcwCouple>,
