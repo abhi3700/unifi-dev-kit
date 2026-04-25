@@ -229,7 +229,10 @@ fn calc_ncw_est_fee_snapshot(
 	coin_decimals: u8,
 ) -> eyre::Result<(U256, U256)> {
 	// NOTE: For C Pay, allowance is either 0 or MAX unlike in NC Pay.
-	let is_suff = !allowance.is_zero() && allowance.ge(&target_amt);
+	// For NC Pay, avoid treating a zero target amount as allowance-sufficient just because
+	// allowance is non-zero. Empty/zero amount is only used for initial UI fee estimation,
+	// and marking it sufficient would incorrectly select the cheaper no-approve gas path.
+	let is_suff = !target_amt.is_zero() && !allowance.is_zero() && allowance.ge(&target_amt);
 
 	let (est_gas_usage, required_allowance_val) = resolve_ncw_gas_usage_and_allowance(
 		is_suff,
