@@ -1139,6 +1139,47 @@ pub struct PreOcpValuesNcwCouple {
 	Clone,
 	PartialEq,
 )]
+pub struct PayOnchainRequest {
+	pub payload: PayOnchainPayload,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub sched: Option<Sched>,
+}
+
+impl PayOnchainRequest {
+	pub fn chain(&self) -> ChainName {
+		self.payload.chain
+	}
+}
+
+#[derive(
+	Archive,
+	RkyvSerialize,
+	RkyvDeserialize,
+	Debug,
+	Default,
+	Serialize,
+	Deserialize,
+	Clone,
+	PartialEq,
+)]
+pub struct Sched {
+	/// scheduled payment id
+	pub id: String,
+	/// Is scheduled pay recurring?
+	pub is_recurring: bool,
+}
+
+#[derive(
+	Archive,
+	RkyvSerialize,
+	RkyvDeserialize,
+	Debug,
+	Default,
+	Serialize,
+	Deserialize,
+	Clone,
+	PartialEq,
+)]
 pub struct PayOnchainPayload {
 	pub chain: ChainName,
 	pub coin: StableCoin,
@@ -1325,12 +1366,13 @@ impl PaymentRecurrence {
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
 pub struct GetScheduledPaymentsResponse {
-	/// This means the ids are repeatable. Hence, the execute dates need to be modified after
-	/// successful payment.
-	pub repeat_ids: Vec<String>,
-	/// This means the ids are non-repeatable. Hence, these needs to be deleted after successful
-	/// payment.
-	pub non_repeat_ids: Vec<String>,
+	// /// This means the ids are repeatable. Hence, the execute dates need to be modified after
+	// /// successful payment.
+	// pub repeat_ids: Vec<String>,
+	// /// This means the ids are non-repeatable. Hence, these needs to be deleted after successful
+	// /// payment.
+	// pub non_repeat_ids: Vec<String>,
+	pub scheds: Vec<Sched>,
 	pub sched_payments: Vec<ScheduledPayOnchainPayload>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub pre_ocp_values_ncw_couple: Option<PreOcpValuesNcwCouple>,
