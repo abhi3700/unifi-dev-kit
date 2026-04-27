@@ -1,7 +1,7 @@
 use crate::{Sdk, types::ApiHandler};
 use unifi_sdk_primitives::types::{
 	ChainName, OcPayHistory, OcPayReceipt, PayHistoryFilterParams, PayOnchainPayload,
-	PreOcpPayload, PreOcpValues, StableCoin,
+	PayOnchainRequest, PreOcpPayload, PreOcpValues, StableCoin,
 };
 
 impl Sdk {
@@ -70,12 +70,14 @@ impl Sdk {
 		user_id: &str,
 		coin: StableCoin,
 		chain: ChainName,
+		create_session: bool,
 	) -> eyre::Result<()> {
 		let handler = ApiHandler::RequestFaucet;
 		let path = handler.fill_path_ordered(&[
 			user_id.to_owned(),
 			coin.to_string(),
 			chain.to_string(),
+			create_session.to_string(),
 		])?;
 		let url = format!("{}{}", self.api_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).send().await;
@@ -88,12 +90,16 @@ impl Sdk {
 		&self,
 		user_id: &str,
 		is_fee_incl: bool,
-		payload: PayOnchainPayload,
+		request: PayOnchainRequest,
 	) -> eyre::Result<String> {
 		let handler = ApiHandler::PayOnchain;
 		let path = handler.fill_path_ordered(&[user_id.to_string(), is_fee_incl.to_string()])?;
 		let url = format!("{}{}", self.api_base_url, path);
-		let resp = self.with_auth(handler, self.client.post(url)).json(&payload).send().await;
+		let resp = self
+			.with_auth(handler, self.client.post(url))
+			.json(&request.payload)
+			.send()
+			.await;
 
 		Sdk::process_response::<String>(resp).await
 	}

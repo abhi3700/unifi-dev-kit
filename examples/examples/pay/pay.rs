@@ -15,7 +15,9 @@
 use colored::Colorize;
 use unifi_examples::{init_sdk, take_input, with_spinner};
 use unifi_sdk_primitives::{
-	types::{ChainName, PayOnchainPayload, PreOcpPayload, PreOcpValues, StableCoin},
+	types::{
+		ChainName, PayOnchainPayload, PayOnchainRequest, PreOcpPayload, PreOcpValues, StableCoin,
+	},
 	utils::validate_and_parse_amount,
 };
 
@@ -89,12 +91,15 @@ async fn main() -> eyre::Result<()> {
 		sdk.pay_onchain(
 			user_id,
 			is_fee_incl,
-			PayOnchainPayload {
-				chain: selected_chain,
-				coin: selected_coin,
-				to_address: to_address.to_owned(),
-				amount: amount.to_owned(),
-				memo: unifi_sdk_primitives::types::Memo::General,
+			PayOnchainRequest {
+				payload: PayOnchainPayload {
+					chain: selected_chain,
+					coin: selected_coin,
+					to_address: to_address.to_owned(),
+					amount: amount.to_owned(),
+					memo: unifi_sdk_primitives::types::Memo::General,
+				},
+				..Default::default()
 			},
 		),
 		Some("✅ Payment submitted!".to_string()),
