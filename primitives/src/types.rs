@@ -1605,7 +1605,7 @@ pub struct ScheduledPaymentsFilter {
 	pub limit: Option<i64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ExtractPaymentsRequest {
 	pub img_bytes: Vec<u8>,
 	pub memo: Memo,
