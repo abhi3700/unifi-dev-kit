@@ -1625,3 +1625,17 @@ pub struct PaymentReviewSession {
 	pub jwt: String,
 	pub payments: Vec<PayOnchainPayload>,
 }
+
+impl PaymentReviewSession {
+	pub fn new(user_id: &str, jwt: &str, payments: &[PayOnchainPayload]) -> Self {
+		Self { user_id: user_id.to_owned(), jwt: jwt.to_owned(), payments: payments.to_owned() }
+	}
+}
+
+#[derive(
+	Debug, Default, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, Clone,
+)]
+pub struct PaymentReviewSessionCreated {
+	pub session_id: String,
+	pub payments: Vec<PayOnchainPayload>,
+}
