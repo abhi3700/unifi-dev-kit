@@ -1610,3 +1610,18 @@ pub struct ExtractPaymentsRequest {
 	pub img_bytes: Vec<u8>,
 	pub memo: Memo,
 }
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Foo {
+	pub draft_id: String,
+	pub session_id: String,
+}
+
+#[derive(
+	Debug, Default, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, Clone,
+)]
+pub struct PaymentReviewSession {
+	pub user_id: String,
+	pub jwt: String,
+	pub payments: Vec<PayOnchainPayload>,
+}
