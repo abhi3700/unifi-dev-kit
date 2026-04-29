@@ -1637,5 +1637,6 @@ impl PaymentReviewSession {
 )]
 pub struct PaymentReviewSessionCreated {
 	pub session_id: String,
-	pub payments: Vec<PayOnchainPayload>,
+	// pub payments: Vec<PayOnchainPayload>,
+	pub payments_len: usize,
 }
