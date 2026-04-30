@@ -1640,3 +1640,29 @@ pub struct PaymentReviewSessionCreated {
 	// pub payments: Vec<PayOnchainPayload>,
 	pub payments_len: usize,
 }
+
+/// For both single & bulk pay types.
+#[derive(
+	Debug, Default, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, Clone,
+)]
+pub struct FalconInstantPaySession {
+	pub payments: Vec<PayOnchainPayload>,
+	pub receipt_ids: Vec<String>,
+	pub falcon_status: FalconStatus,
+}
+
+#[derive(
+	Debug, Default, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, Clone,
+)]
+pub enum FalconStatus {
+	#[default]
+	Submitted,
+	Processing,
+	Processed,
+}
+
+impl FalconInstantPaySession {
+	pub fn new(payments: &[PayOnchainPayload]) -> Self {
+		Self { payments: payments.to_owned(), ..Default::default() }
+	}
+}
