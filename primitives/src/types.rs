@@ -1548,16 +1548,34 @@ impl From<ApiKey> for Bson {
 #[derive(
 	Archive, RkyvSerialize, RkyvDeserialize, Debug, Default, Serialize, Deserialize, PartialEq,
 )]
-pub struct Session {
+pub struct UserSession {
 	/// Address or Email
 	pub user_id: String,
 	pub jwt: String,
+	pub ipo_enabled: bool,
+	pub spo_enabled: bool,
 }
 
-impl Session {
-	pub fn new(user_id: &str, jwt: &str) -> Self {
-		Self { user_id: user_id.to_owned(), jwt: jwt.to_owned() }
+impl UserSession {
+	pub fn new(
+		user_id: &str,
+		jwt: &str,
+		ipo_enabled: Option<bool>,
+		spo_enabled: Option<bool>,
+	) -> Self {
+		Self {
+			user_id: user_id.to_owned(),
+			jwt: jwt.to_owned(),
+			ipo_enabled: ipo_enabled.unwrap_or_default(),
+			spo_enabled: spo_enabled.unwrap_or_default(),
+		}
 	}
+}
+
+#[derive(Default, Serialize, Deserialize)]
+pub struct FalconSessionParams {
+	pub ipo_enabled: Option<bool>,
+	pub spo_enabled: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1647,22 +1665,10 @@ pub struct PaymentReviewSessionCreated {
 )]
 pub struct FalconInstantPaySession {
 	pub payments: Vec<PayOnchainPayload>,
-	pub receipt_ids: Vec<String>,
-	pub falcon_status: FalconStatus,
-}
-
-#[derive(
-	Debug, Default, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, Clone,
-)]
-pub enum FalconStatus {
-	#[default]
-	Submitted,
-	Processing,
-	Processed,
 }
 
 impl FalconInstantPaySession {
 	pub fn new(payments: &[PayOnchainPayload]) -> Self {
-		Self { payments: payments.to_owned(), ..Default::default() }
+		Self { payments: payments.to_owned() }
 	}
 }
