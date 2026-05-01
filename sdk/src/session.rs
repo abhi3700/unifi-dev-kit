@@ -1,16 +1,17 @@
 use crate::{Sdk, types::ApiHandler};
-use unifi_sdk_primitives::types::{FalconSessionParams, UserSession};
+use unifi_sdk_primitives::types::{CreateSessionRequest, FalconHeartbeat, UserSession};
 
 impl Sdk {
 	/// Create session id for web app from `user_id`.
 	pub async fn create_session(
 		&self,
 		user_id: &str,
-		request: FalconSessionParams,
+		falcon_heartbeat: Option<FalconHeartbeat>,
 	) -> eyre::Result<String> {
 		let handler = ApiHandler::CreateSession;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
 		let url = format!("{}{}", self.api_base_url, path);
+		let request = CreateSessionRequest { falcon_heartbeat };
 		let resp = self.with_auth(handler, self.client.post(url)).json(&request).send().await;
 
 		Sdk::process_response::<String>(resp).await

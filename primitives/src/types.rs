@@ -1552,30 +1552,96 @@ pub struct UserSession {
 	/// Address or Email
 	pub user_id: String,
 	pub jwt: String,
-	pub ipo_enabled: bool,
-	pub spo_enabled: bool,
+	/// If Falcon is running i.e. Some(..), we know its heartbeat (IPO, SPO, ..) values as we are
+	/// running.
+	///
+	/// ## Usage
+	/// - Set as `None` when creating session from CLI. No falcon params required.
+	/// - This is required during payment to decide expiry during submit instant pay, . Not just in
+	/// payment page, but also for pages where pay is part of, like wallet, api_plan, api, ..
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub falcon_heartbeat: Option<FalconHeartbeat>,
 }
 
 impl UserSession {
-	pub fn new(
-		user_id: &str,
-		jwt: &str,
-		ipo_enabled: Option<bool>,
-		spo_enabled: Option<bool>,
-	) -> Self {
-		Self {
-			user_id: user_id.to_owned(),
-			jwt: jwt.to_owned(),
-			ipo_enabled: ipo_enabled.unwrap_or_default(),
-			spo_enabled: spo_enabled.unwrap_or_default(),
-		}
+	pub fn new(user_id: &str, jwt: &str, falcon_heartbeat: Option<FalconHeartbeat>) -> Self {
+		Self { user_id: user_id.to_owned(), jwt: jwt.to_owned(), falcon_heartbeat }
 	}
 }
 
-#[derive(Default, Serialize, Deserialize)]
-pub struct FalconSessionParams {
-	pub ipo_enabled: Option<bool>,
-	pub spo_enabled: Option<bool>,
+/// This is just for parsing as Json<..> in API handler fn as axum handlers don't support Option<>
+/// type.
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct CreateSessionRequest {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub falcon_heartbeat: Option<FalconHeartbeat>,
+}
+
+#[derive(
+	Debug,
+	Default,
+	Serialize,
+	Deserialize,
+	Archive,
+	RkyvSerialize,
+	RkyvDeserialize,
+	Clone,
+	PartialEq,
+)]
+pub struct FalconHeartbeat {
+	/// Turn-off the IPO means we don't have to set frequency_secs.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub ipo: Option<FalconIpo>,
+	/// If diabled, then on web app, schedule pay button is shown as disabled. If user clicks on
+	/// it, then it shows "SPO disabled" toast.
+	pub spo_enabled: bool,
+}
+
+impl FalconHeartbeat {
+	pub const MIN_FALCON_IPO_FREQ_SECS: u64 = 1;
+	pub const MAX_FALCON_IPO_FREQ_SECS: u64 = 60;
+
+	pub fn new(ipo: Option<FalconIpo>, spo_enabled: bool) -> eyre::Result<Self> {
+		if let Some(FalconIpo { enabled, freq_secs }) = ipo &&
+			enabled
+		{
+			eyre::ensure!(
+				freq_secs >= Self::MIN_FALCON_IPO_FREQ_SECS,
+				"Falcon IPO frequency must be at least 1 second"
+			);
+			eyre::ensure!(
+				freq_secs <= Self::MAX_FALCON_IPO_FREQ_SECS,
+				"Falcon IPO frequency must be at most 60 seconds"
+			);
+		}
+
+		Ok(Self { ipo, spo_enabled })
+	}
+	pub fn submit_expiry_secs(&self) -> u64 {
+		if let Some(FalconIpo { enabled, freq_secs }) = self.ipo {
+			if enabled {
+				return (freq_secs * 600).clamp(600, 3600);
+			}
+		}
+
+		600
+	}
+}
+
+#[derive(
+	Debug,
+	Default,
+	Serialize,
+	Deserialize,
+	Archive,
+	RkyvSerialize,
+	RkyvDeserialize,
+	Clone,
+	PartialEq,
+)]
+pub struct FalconIpo {
+	pub enabled: bool,
+	pub freq_secs: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
