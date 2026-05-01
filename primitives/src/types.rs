@@ -1608,14 +1608,18 @@ impl FalconHeartbeat {
 		Ok(falcon_heartbeat)
 	}
 
-	pub fn submit_expiry_secs(&self) -> u64 {
-		if let Some(FalconIpo { enabled, freq_secs }) = self.ipo {
-			if enabled {
-				return (freq_secs * 600).clamp(600, 3600);
-			}
+	/// ## Returns
+	/// - tuple of:
+	///   - is_ipo_enabled
+	///   - submit expiry secs
+	pub fn instant_pay_submit_config(&self) -> (bool, u64) {
+		if let Some(FalconIpo { enabled, freq_secs }) = self.ipo &&
+			enabled
+		{
+			return (enabled, (freq_secs * 600).clamp(600, 3600));
 		}
 
-		600
+		(false, 600)
 	}
 
 	pub fn health_check(&self) -> eyre::Result<()> {
@@ -1749,30 +1753,14 @@ impl FalconInstantPaySession {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct FalconIpSubmitRequest {
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub session_id: Option<String>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub user_id: Option<String>,
 	pub payments: Vec<PayOnchainPayload>,
 	pub is_ipo_enabled: bool,
 	pub expiry: i64,
 }
 
 impl FalconIpSubmitRequest {
-	pub fn new(
-		session_id: Option<&str>,
-		user_id: Option<&str>,
-		payments: &[PayOnchainPayload],
-		is_ipo_enabled: bool,
-		expiry: i64,
-	) -> Self {
-		Self {
-			session_id: session_id.map(str::to_owned),
-			user_id: user_id.map(str::to_owned),
-			payments: payments.to_vec(),
-			is_ipo_enabled,
-			expiry,
-		}
+	pub fn new(payments: &[PayOnchainPayload], is_ipo_enabled: bool, expiry: i64) -> Self {
+		Self { payments: payments.to_vec(), is_ipo_enabled, expiry }
 	}
 }
 
