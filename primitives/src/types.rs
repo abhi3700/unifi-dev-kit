@@ -1746,3 +1746,58 @@ impl FalconInstantPaySession {
 		Self { payments: payments.to_owned() }
 	}
 }
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct FalconIpSubmitRequest {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub session_id: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub user_id: Option<String>,
+	pub payments: Vec<PayOnchainPayload>,
+	pub is_ipo_enabled: bool,
+	pub expiry: i64,
+}
+
+impl FalconIpSubmitRequest {
+	pub fn new(
+		session_id: Option<&str>,
+		user_id: Option<&str>,
+		payments: &[PayOnchainPayload],
+		is_ipo_enabled: bool,
+		expiry: i64,
+	) -> Self {
+		Self {
+			session_id: session_id.map(str::to_owned),
+			user_id: user_id.map(str::to_owned),
+			payments: payments.to_vec(),
+			is_ipo_enabled,
+			expiry,
+		}
+	}
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct FalconIpoTakeNextPaymentResponse {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub res: Option<(FalconInstantPaySession, i64)>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct FalconIpoRequeueFailedPaymentRequest {
+	pub ip_session: FalconInstantPaySession,
+	pub score: i64,
+	pub expiry: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct FalconIpcTakePaymentResponse {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub res: Option<FalconInstantPaySession>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct FalconIpcSetFailedPaymentRequest {
+	pub session_id: String,
+	pub ip_session: FalconInstantPaySession,
+	pub expiry: i64,
+}
