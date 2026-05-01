@@ -1602,7 +1602,24 @@ impl FalconHeartbeat {
 	pub const MAX_FALCON_IPO_FREQ_SECS: u64 = 60;
 
 	pub fn new(ipo: Option<FalconIpo>, spo_enabled: bool) -> eyre::Result<Self> {
-		if let Some(FalconIpo { enabled, freq_secs }) = ipo &&
+		let falcon_heartbeat = Self { ipo, spo_enabled };
+		falcon_heartbeat.health_check()?;
+
+		Ok(falcon_heartbeat)
+	}
+
+	pub fn submit_expiry_secs(&self) -> u64 {
+		if let Some(FalconIpo { enabled, freq_secs }) = self.ipo {
+			if enabled {
+				return (freq_secs * 600).clamp(600, 3600);
+			}
+		}
+
+		600
+	}
+
+	pub fn health_check(&self) -> eyre::Result<()> {
+		if let Some(FalconIpo { enabled, freq_secs }) = self.ipo &&
 			enabled
 		{
 			eyre::ensure!(
@@ -1615,16 +1632,7 @@ impl FalconHeartbeat {
 			);
 		}
 
-		Ok(Self { ipo, spo_enabled })
-	}
-	pub fn submit_expiry_secs(&self) -> u64 {
-		if let Some(FalconIpo { enabled, freq_secs }) = self.ipo {
-			if enabled {
-				return (freq_secs * 600).clamp(600, 3600);
-			}
-		}
-
-		600
+		Ok(())
 	}
 }
 
