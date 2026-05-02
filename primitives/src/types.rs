@@ -1787,5 +1787,4 @@ pub struct FalconIpcTakePaymentResponse {
 pub struct FalconIpcSetFailedPaymentRequest {
 	pub session_id: String,
 	pub ip_session: FalconInstantPaySession,
-	pub expiry: i64,
 }
