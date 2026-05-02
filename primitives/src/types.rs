@@ -1764,7 +1764,7 @@ impl FalconIpSubmitRequest {
 	}
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct FalconIpoTakeNextPaymentResponse {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub res: Option<(FalconInstantPaySession, i64)>,
@@ -1777,7 +1777,7 @@ pub struct FalconIpoRequeueFailedPaymentRequest {
 	pub expiry: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct FalconIpcTakePaymentResponse {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub res: Option<FalconInstantPaySession>,
