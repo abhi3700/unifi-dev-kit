@@ -955,22 +955,43 @@ impl PreOcpValuesNcw {
 		let amount = parse_human_fmt_to_u256(amount, coin_decimals, false)?;
 		let est_fee = parse_human_fmt_to_u256(&self.est_fee, coin_decimals, false)?;
 
-		Ok(amount + est_fee)
+		amount
+			.checked_add(est_fee)
+			.ok_or_else(|| eyre::eyre!("Amount + est. fee overflowed for {coin}"))
 	}
 
 	pub fn ensure_balance_and_collect_approval_coin(
 		&self,
-		sched_amount: &str,
+		amount: &str,
 		coin: StableCoin,
 		coins_for_approval: &mut Vec<StableCoin>,
 	) -> eyre::Result<()> {
-		let tot_amt_w_fee = self.tot_amt_w_fee(sched_amount, coin)?;
+		let shortfall = self.ensure_balance_and_get_shortfall(amount, coin)?;
+		eyre::ensure!(shortfall.is_none(), "Insufficient balance for {coin}");
+
+		self.collect_coin_for_approval(coin, coins_for_approval);
+		Ok(())
+	}
+
+	pub fn ensure_balance_and_get_shortfall(
+		&self,
+		amount: &str,
+		coin: StableCoin,
+	) -> eyre::Result<Option<U256>> {
+		let tot_amt_w_fee = self.tot_amt_w_fee(amount, coin)?;
 		let balance = parse_human_fmt_to_u256(&self.balance, coin.decimals(), false)?;
-		eyre::ensure!(balance.ge(&tot_amt_w_fee), "Insufficient balance for {coin}");
+
+		Ok(tot_amt_w_fee.checked_sub(balance).filter(|v| !v.is_zero()))
+	}
+
+	pub fn collect_coin_for_approval(
+		&self,
+		coin: StableCoin,
+		coins_for_approval: &mut Vec<StableCoin>,
+	) {
 		if !self.allowance.is_suff && !self.allowance.is_max_allowance {
 			coins_for_approval.push(coin);
 		}
-		Ok(())
 	}
 }
 
