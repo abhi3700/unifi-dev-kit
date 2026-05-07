@@ -1817,9 +1817,17 @@ pub struct FalconIpcSetFailedPaymentRequest {
 	pub ip_session: FalconInstantPaySession,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct ApproveCoinWithKmsWalletRequest {
-	pub chain: ChainName,
-	pub coin: StableCoin,
-	pub amount: U256,
+#[derive(
+	Archive,
+	RkyvSerialize,
+	RkyvDeserialize,
+	Serialize,
+	Deserialize,
+	Debug,
+	Clone,
+	PartialEq,
+	Default,
+)]
+pub struct RpcUrlRkyvResponse {
+	pub http_url: Vec<u8>,
 }
