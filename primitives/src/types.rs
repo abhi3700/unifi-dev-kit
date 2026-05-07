@@ -978,10 +978,17 @@ impl PreOcpValuesNcw {
 		amount: &str,
 		coin: StableCoin,
 	) -> eyre::Result<Option<U256>> {
-		let tot_amt_w_fee = self.tot_amt_w_fee(amount, coin)?;
+		let tot_spend = self.tot_amt_w_fee(amount, coin)?;
 		let balance = parse_human_fmt_to_u256(&self.balance, coin.decimals(), false)?;
 
-		Ok(tot_amt_w_fee.checked_sub(balance).filter(|v| !v.is_zero()))
+		Ok(tot_spend.checked_sub(balance).filter(|v| !v.is_zero()))
+	}
+
+	pub fn ensure_suff_balance(&self, amount: &str, coin: StableCoin) -> eyre::Result<bool> {
+		let tot_spend = self.tot_amt_w_fee(amount, coin)?;
+		let balance = parse_human_fmt_to_u256(&self.balance, coin.decimals(), false)?;
+
+		Ok(tot_spend.le(&balance))
 	}
 
 	pub fn collect_coin_for_approval(
