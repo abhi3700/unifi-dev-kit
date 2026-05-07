@@ -1816,3 +1816,10 @@ pub struct FalconIpcSetFailedPaymentRequest {
 	pub session_id: String,
 	pub ip_session: FalconInstantPaySession,
 }
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct ApproveCoinWithKmsWalletRequest {
+	pub chain: ChainName,
+	pub coin: StableCoin,
+	pub amount: U256,
+}
