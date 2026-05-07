@@ -1816,18 +1816,3 @@ pub struct FalconIpcSetFailedPaymentRequest {
 	pub session_id: String,
 	pub ip_session: FalconInstantPaySession,
 }
-
-#[derive(
-	Archive,
-	RkyvSerialize,
-	RkyvDeserialize,
-	Serialize,
-	Deserialize,
-	Debug,
-	Clone,
-	PartialEq,
-	Default,
-)]
-pub struct RpcUrlRkyvResponse {
-	pub http_url: Vec<u8>,
-}
