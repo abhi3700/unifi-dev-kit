@@ -1628,6 +1628,8 @@ pub struct FalconHeartbeat {
 impl FalconHeartbeat {
 	pub const MIN_FALCON_IPO_FREQ_SECS: u64 = 1;
 	pub const MAX_FALCON_IPO_FREQ_SECS: u64 = 60;
+	pub const MIN_SESSION_EXPIRY_SECS: u64 = 600;
+	pub const MAX_SESSION_EXPIRY_SECS: u64 = 3600;
 
 	pub fn new(ipo: Option<FalconIpo>, spo_enabled: bool) -> eyre::Result<Self> {
 		let falcon_heartbeat = Self { ipo, spo_enabled };
@@ -1641,13 +1643,16 @@ impl FalconHeartbeat {
 	///   - is_ipo_enabled
 	///   - submit expiry secs
 	pub fn instant_pay_submit_config(&self) -> (bool, u64) {
+		let min = Self::MIN_SESSION_EXPIRY_SECS;
+
 		if let Some(FalconIpo { enabled, freq_secs }) = self.ipo &&
 			enabled
 		{
-			return (enabled, (freq_secs * 600).clamp(600, 3600));
+			let max = Self::MAX_SESSION_EXPIRY_SECS;
+			return (enabled, (freq_secs * min).clamp(min, max));
 		}
 
-		(false, 600)
+		(false, min)
 	}
 
 	pub fn health_check(&self) -> eyre::Result<()> {
