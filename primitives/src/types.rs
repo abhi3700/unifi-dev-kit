@@ -1322,6 +1322,21 @@ pub struct BulkPayItemRequest {
 	pub items: Vec<BulkPayItem>,
 }
 
+impl BulkPayItemRequest {
+	pub fn to_payments(&self) -> Vec<PayOnchainPayload> {
+		self.items
+			.iter()
+			.map(|item| PayOnchainPayload {
+				chain: self.chain,
+				coin: item.coin,
+				to_address: item.to_address.clone(),
+				amount: item.amount.clone(),
+				memo: item.memo.clone(),
+			})
+			.collect()
+	}
+}
+
 /// `PayOnchainPayload` w/o `chain`.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct BulkPayItem {
