@@ -1316,6 +1316,11 @@ impl ScheduledPayOnchainPayload {
 	}
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BulkPayItemRequest {
+	pub items: Vec<BulkPayItem>,
+}
+
 /// `PayOnchainPayload` w/o `chain`.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct BulkPayItem {
