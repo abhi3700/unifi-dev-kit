@@ -725,7 +725,10 @@ pub fn update_req_allowance(
 
 	let mut total_spend = if is_fee_incl { amount_u256 } else { amount_u256 + est_fee_u256 };
 	// NOTE: add $10 as safety val, so as to avoid repetitive approval prompt.
-	total_spend += U256::from(10_u128) * U256::from(10).pow(U256::from(coin_decimals));
+	let safety_buffer = U256::from(10_u128) * U256::from(10_u128).pow(U256::from(coin_decimals));
+	total_spend = total_spend
+		.checked_add(safety_buffer)
+		.ok_or_eyre("Overflow while adding safety buffer to total spend")?;
 
 	let allowance = U256::from_str(allowance).wrap_err("Failed to parse allowance")?;
 	let req_allowance = if total_spend.gt(&allowance) {
@@ -926,6 +929,34 @@ pub fn now_timestamp_secs() -> u64 {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn now_timestamp_secs() -> u64 {
 	chrono::Utc::now().timestamp() as u64
+}
+
+/// Generate a unique id (UID) using blake3 (fast).
+///
+/// ## Parameters
+/// - user_id: User ID from Telegram bot API or google/meta/apple login
+/// - timestamp_as_micros: Timestamp as microseconds
+///
+/// ## Usage
+/// - Generate UID.
+/// - Generate PID. The purpose is to not share the UID or user_id, but instead share PID.
+///   - This ID is used to send payment notification 🔔 to Payer after it shares its PID with the
+///     recipient.
+/// - Generate Onchain/Offchain Pay receipt ID.
+///
+///
+/// ## Returns
+/// Output: uid (last 12 bytes hex string)
+///
+/// NOTE: 12 bytes because of shorter size like document id to fetch faster. Can't rely on
+/// MongoDB's document id as it's specific to MongoDB. In future, if we change to some other
+/// scalable DB like Cassandra, Scylla, then we have to come up with our own uid generation
+/// algorithm.
+pub fn generate_unique_id(user_id: &str, timestamp_as_micros: i64) -> String {
+	let input = format!("{}{}", user_id, timestamp_as_micros);
+	let hash = blake3::hash(input.as_bytes()).to_hex().to_string();
+	// Extract the last 12 bytes (96 bits) of the hash
+	hash[40..].to_string()
 }
 
 /// Test

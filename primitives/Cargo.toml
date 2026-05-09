@@ -11,6 +11,7 @@ doctest = false
 alloy-contract = { version = "2.0.0"}
 alloy-primitives = { version = "1.5.7"}
 alloy-sol-types = { version = "1.5.7", features = ["eip712-serde", "json"], optional = true}
+blake3 = { version = "1.7.0", optional = true}
 bson = { version = "2.14.0", default-features = false}
 chrono = {version = "0.4.40", optional = true}
 eyre = "0.6.12"
@@ -27,6 +28,6 @@ thiserror = "2.0.12"
 base64 = "0.22.1"
 
 [features]
-utils = ["dep:num_cpus", "dep:js-sys", "dep:chrono"]
+utils = ["dep:num_cpus", "dep:js-sys", "dep:chrono", "dep:blake3"]
 evm = ["dep:alloy-sol-types", "dep:k256", "dep:hex"]
 permit2 = ["dep:alloy-sol-types"]
