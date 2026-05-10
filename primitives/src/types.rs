@@ -1015,6 +1015,7 @@ pub struct PreOcpValuesNcwBulk {
 }
 
 impl PreOcpValuesNcwBulk {
+	/// w `ScheduledPayOnchainPayload`
 	pub fn tot_amt_w_fee(
 		&self,
 		sched_payments: &[ScheduledPayOnchainPayload],
@@ -1039,6 +1040,7 @@ impl PreOcpValuesNcwBulk {
 		Ok(tot_amount_w_fee)
 	}
 
+	/// w `ScheduledPayOnchainPayload`
 	pub fn ensure_balance_and_collect_approval_coin(
 		&self,
 		sched_payments: &[ScheduledPayOnchainPayload],
@@ -1059,6 +1061,96 @@ impl PreOcpValuesNcwBulk {
 			}
 		}
 		Ok(())
+	}
+}
+
+impl PreOcpValuesNcwBulk {
+	/// w `BulkPayItem`
+	pub fn tot_amt_w_fee2(&self, items: &[BulkPayItem]) -> eyre::Result<HashMap<StableCoin, U256>> {
+		let mut tot_amount_w_fee: HashMap<StableCoin, U256> =
+			HashMap::with_capacity(StableCoin::all().len());
+
+		for item in items {
+			let coin = item.coin;
+			let amount = parse_human_fmt_to_u256(&item.amount, coin.decimals(), false)?;
+
+			let total = tot_amount_w_fee.entry(coin).or_insert(U256::ZERO);
+			*total += amount;
+		}
+
+		let fee_coin = items.last().ok_or_eyre("Failed to find the fee coin.")?.coin();
+		let tot_est_fee = parse_human_fmt_to_u256(&self.tot_est_fee, fee_coin.decimals(), false)?;
+
+		let fee_coin_total = tot_amount_w_fee.entry(fee_coin).or_insert(U256::ZERO);
+		*fee_coin_total += tot_est_fee;
+
+		Ok(tot_amount_w_fee)
+	}
+
+	/// w `BulkPayItem`
+	pub fn ensure_balance_and_collect_approval_coin2(
+		&self,
+		items: &[BulkPayItem],
+		coins_for_approval: &mut Vec<StableCoin>,
+	) -> eyre::Result<()> {
+		let tot_amount_w_fee = self.tot_amt_w_fee2(items)?;
+		for (&coin, &tot_amt_w_fee) in tot_amount_w_fee.iter() {
+			let coin_entry = self
+				.coin_entries
+				.get(&coin)
+				.ok_or_eyre(format!("Failed to find pre-OCP values for coin: {}", coin))?;
+
+			let balance = parse_human_fmt_to_u256(&coin_entry.balance, coin.decimals(), false)?;
+			eyre::ensure!(balance.ge(&tot_amt_w_fee), "Insufficient balance for {coin}");
+
+			Self::collect_coin_for_approval_single(coin_entry, coin, coins_for_approval);
+		}
+		Ok(())
+	}
+
+	/// w `BulkPayItem`
+	pub fn ensure_balance_and_get_shortfall(
+		&self,
+		items: &[BulkPayItem],
+	) -> eyre::Result<HashMap<StableCoin, U256>> {
+		let tot_amount_w_fee = self.tot_amt_w_fee2(items)?;
+		let mut shortfalls = HashMap::new();
+
+		for (&coin, &tot_amt_w_fee) in tot_amount_w_fee.iter() {
+			let coin_entry = self
+				.coin_entries
+				.get(&coin)
+				.ok_or_eyre(format!("Failed to find pre-OCP values for coin: {}", coin))?;
+
+			let balance = parse_human_fmt_to_u256(&coin_entry.balance, coin.decimals(), false)?;
+
+			if let Some(shortfall) = tot_amt_w_fee.checked_sub(balance).filter(|v| !v.is_zero()) {
+				shortfalls.insert(coin, shortfall);
+			}
+		}
+
+		Ok(shortfalls)
+	}
+
+	/// w `BulkPayItem`
+	pub fn ensure_suff_balance(&self, items: &[BulkPayItem]) -> eyre::Result<bool> {
+		Ok(self.ensure_balance_and_get_shortfall(items)?.is_empty())
+	}
+
+	pub fn collect_coin_for_approval(&self, coins_for_approval: &mut Vec<StableCoin>) {
+		for (&coin, coin_entry) in self.coin_entries.iter() {
+			Self::collect_coin_for_approval_single(coin_entry, coin, coins_for_approval);
+		}
+	}
+
+	fn collect_coin_for_approval_single(
+		coin_entry: &PreOcpValuesNcwSingleCoin,
+		coin: StableCoin,
+		coins_for_approval: &mut Vec<StableCoin>,
+	) {
+		if !coin_entry.allowance.is_suff && !coin_entry.allowance.is_max_allowance {
+			coins_for_approval.push(coin);
+		}
 	}
 }
 
