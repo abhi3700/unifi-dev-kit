@@ -2,11 +2,24 @@ use super::Sdk;
 use crate::types::ApiHandler;
 use std::collections::HashMap;
 use unifi_sdk_primitives::{
-	types::{ChainName, ChainProtocol, StableCoin, WalletBalancesByChain, WalletBalancesByCoin},
+	types::{
+		ChainName, ChainProtocol, StableCoin, WalletBalances, WalletBalancesByChain,
+		WalletBalancesByCoin,
+	},
 	utils::sanitize_address,
 };
 
 impl Sdk {
+	/// Get all supported wallet asset balances across all supported chains.
+	pub async fn get_wallet_balances(&self, user_id: &str) -> eyre::Result<WalletBalances> {
+		let handler = ApiHandler::GetWalletBalances;
+		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
+		let url = format!("{}{}", self.api_base_url, path);
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
+
+		Sdk::process_response::<WalletBalances>(resp).await
+	}
+
 	pub async fn get_user_wallet_address(
 		&self,
 		user_id: &str,

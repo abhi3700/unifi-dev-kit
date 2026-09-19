@@ -44,6 +44,7 @@ pub enum ApiHandler {
 	// Onchain
 	GetOcChainCoinBalance,
 	GetOcChainAllCoinsBalances,
+	GetWalletBalances,
 	GetWalletBalancesByChain,
 	GetWalletBalancesByCoin,
 
@@ -83,6 +84,7 @@ impl ApiHandler {
 			// Onchain
 			AH::GetOcChainCoinBalance => "/wallet/onchain/balance/{user_id}/{chain}/{coin}",
 			AH::GetOcChainAllCoinsBalances => "/wallet/onchain/balances/{user_id}/{chain}",
+			AH::GetWalletBalances => "/wallet/balances/{user_id}",
 			AH::GetWalletBalancesByChain => "/wallet/balances/by_chain/{user_id}/{chain}",
 			AH::GetWalletBalancesByCoin => "/wallet/balances/by_coin/{user_id}/{coin}",
 

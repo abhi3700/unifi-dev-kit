@@ -432,6 +432,11 @@ pub struct WalletBalancesByCoinChainDetails {
 	pub value_usd: String,
 }
 
+/// All supported wallet assets, ordered by their total USD value.
+///
+/// A sequence is used instead of a map because the order is part of the API response contract.
+pub type WalletBalances = Vec<(StableCoin, WalletBalancesByCoin)>;
+
 /// Shows only user profile
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct UserProfile {
