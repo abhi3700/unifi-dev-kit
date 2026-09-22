@@ -1600,11 +1600,25 @@ impl FromStr for Platform {
 	}
 }
 
-/// this is
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NcAuthChallengeRequest {
+	pub domain: String,
+	pub uri: String,
+	pub chain_id: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+pub struct NcAuthChallenge {
+	pub message: String,
+	pub nonce: String,
+	pub expires_at: u64,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NcJwtAuthPayload {
 	pub message: String,
 	pub signature: String,
+	pub nonce: String,
 	pub platform: Platform,
 }
 

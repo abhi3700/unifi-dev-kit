@@ -14,6 +14,7 @@ pub enum ApiHandler {
 	DelApiKey,
 
 	/* Auth */
+	CreateNcAuthChallenge,
 	GenerateJwtForNc,
 
 	/* Profile */
@@ -67,6 +68,7 @@ impl ApiHandler {
 			AH::DelApiKey => "/api_key/del/{user_id}/{name}",
 
 			/* Auth */
+			AH::CreateNcAuthChallenge => "/auth/challenge/{address}",
 			AH::GenerateJwtForNc => "/auth/generate_jwt/{address}",
 
 			/* Profile */
@@ -155,7 +157,7 @@ impl ApiHandler {
 		use ApiHandler as AH;
 		match self {
 			// Signature verification before this api call.
-			AH::GenerateJwtForNc => false,
+			AH::CreateNcAuthChallenge | AH::GenerateJwtForNc => false,
 			_ => true,
 		}
 	}

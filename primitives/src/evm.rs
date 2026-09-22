@@ -141,8 +141,6 @@ pub fn recover_address_from_eth_signature(
 	eyre::bail!("failed to recover address from Ethereum signature")
 }
 
-pub const SIGN_MESSAGE_CHALLENGE: &str = "Connect to UniFi";
-
 #[cfg(test)]
 mod tests {
 	use super::*;
