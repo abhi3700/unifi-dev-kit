@@ -15,7 +15,7 @@ Watch this [video](https://www.youtube.com/watch?v=KwZcMedBves) & launch post on
 To start using the UniFi API, you’ll need to create an API key.
 
 1. **Open the API Dashboard**: \
-👉 <https://prod.unifi-web3.pages.dev/api>
+👉 <https://prod.unifi-web3.pages.dev/app/api>
 1. **Sign up or log in** (if you haven’t already).\
 1. Once logged in, the dashboard will look like this 👇\
    Click on <kbd>**New API Key**</kbd> button to create a new key.
