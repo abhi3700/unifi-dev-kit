@@ -60,7 +60,7 @@ To start using the UniFi API, you’ll need to create an API key.
 
     > 💡 **Note:** The FREE plan includes **100,000 API credits** by default — perfect for testing and initial integration.
 
-2. **Copy and Store Your API Key Securely** \
+1. **Copy and Store Your API Key Securely** \
    Copy the key by clicking the **copy icon** and save it in a secure place (e.g., environment variable or secrets manager).   \
    You’ll need this key to authenticate all your API requests.
 
@@ -91,7 +91,7 @@ File path:
 {
     "rest-client.environmentVariables": {
         "prod": {
-            "base_url": "https://unifi-api-4a5e.onrender.com",
+            "base_url": "https://api.payunifi.com",
             "api_key": "YOUR_API_KEY"
         }
     }
