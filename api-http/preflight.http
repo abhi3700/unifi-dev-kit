@@ -1,0 +1,65 @@
+### Preflight
+@name = Preflight
+@details = Check balances, allowances, and est. fees before payment.
+
+### Environment Variables
+@HOST={{base_url}}
+@USER_ID={{user_id}}
+@AUTH_HEADER=Authorization: Bearer {{api_key}}
+@CONTENT_TYPE=Content-Type: application/json
+@CHAIN=Sepolia
+@COIN=USDT
+@TO_ADDRESS=0x2222222222222222222222222222222222222222
+@IS_FEE_INCL=false
+
+### Managed-wallet net balance
+# @name FetchPreOcpNetBalance
+GET {{HOST}}/payment/onchain/net_balance/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+{{AUTH_HEADER}}
+
+### Managed-wallet estimated fee
+# @name FetchPreOcpTotalEstimateFee
+GET {{HOST}}/payment/onchain/est_fee/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+{{AUTH_HEADER}}
+
+### Managed-wallet balance and estimated fee
+# @name FetchPreOcpBalanceAndEstimateFee
+GET {{HOST}}/payment/onchain/balance_est_fee/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+{{AUTH_HEADER}}
+
+### Self-custodial balance, allowance, and estimated fee
+# @name FetchPreOcpBalanceAndEstimateFeeNcw
+POST {{HOST}}/payment/onchain/balance_est_fee_ncw/{{USER_ID}}/{{IS_FEE_INCL}}
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+    "chain": "{{CHAIN}}",
+    "coin": "{{COIN}}",
+    "to_address": "{{TO_ADDRESS}}",
+    "amount": "10.124",
+    "memo": "General"
+}
+
+### Self-custodial bulk balances, allowances, and estimated fee
+# @name FetchPreOcpBalanceAndEstimateFeeNcwBulkPay
+POST {{HOST}}/payment/onchain/balance_est_fee_ncw_bulkpay/{{USER_ID}}/{{IS_FEE_INCL}}
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+    "chain": "{{CHAIN}}",
+    "items": [
+        {
+            "coin": "{{COIN}}",
+            "to_address": "{{TO_ADDRESS}}",
+            "amount": "10.124",
+            "memo": "BulkPay"
+        }
+    ]
+}
+
+### Raw inputs for client-side self-custodial fee calculation
+# @name PreFetchNcwBalanceFeeParams
+GET {{HOST}}/payment/onchain/ncw/pre_fetch_balance_est_fee_params/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+{{AUTH_HEADER}}

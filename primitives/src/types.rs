@@ -1276,6 +1276,315 @@ impl PayOnchainRequest {
 	}
 }
 
+/// Request body for a self-custodial payment.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+pub struct PayOnchainNcwRequest {
+	pub payload: PayOnchainPayloadNcw,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub sched: Option<Sched>,
+}
+
+impl PayOnchainNcwRequest {
+	pub fn chain(&self) -> ChainName {
+		self.payload.chain()
+	}
+}
+
+/// Inputs used to create the Permit2 message for a self-custodial payment.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct PayOnchainPayloadNcwBase {
+	pub chain: ChainName,
+	pub coin: StableCoin,
+	pub to_address: String,
+	/// Human-readable stablecoin amount, for example `"10.25"`.
+	pub amount: String,
+	/// Human-readable estimated fee, for example `"0.12"`.
+	pub est_fee: String,
+	/// Permit expiry as a Unix timestamp in seconds.
+	pub deadline: u64,
+}
+
+impl Default for PayOnchainPayloadNcwBase {
+	fn default() -> Self {
+		Self {
+			chain: Default::default(),
+			coin: Default::default(),
+			to_address: Default::default(),
+			amount: Default::default(),
+			est_fee: Default::default(),
+			deadline: PayOnchainPayloadNcw::default_deadline(),
+		}
+	}
+}
+
+impl PayOnchainPayloadNcwBase {
+	pub fn new(
+		chain: ChainName,
+		coin: StableCoin,
+		to_address: &str,
+		amount: &str,
+		est_fee: &str,
+		deadline: u64,
+	) -> Self {
+		Self {
+			chain,
+			coin,
+			to_address: to_address.to_owned(),
+			amount: amount.to_owned(),
+			est_fee: est_fee.to_owned(),
+			deadline,
+		}
+	}
+}
+
+/// Signed Permit2 payload for one self-custodial payment.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+pub struct PayOnchainPayloadNcw {
+	pub base: PayOnchainPayloadNcwBase,
+	/// Permit2 nonce encoded as a decimal string.
+	pub nonce: String,
+	/// Permit2 signature.
+	pub sig: String,
+	pub memo: Memo,
+}
+
+impl PayOnchainPayloadNcw {
+	pub fn new(base: &PayOnchainPayloadNcwBase, nonce: &str, sig: &str, memo: Memo) -> Self {
+		Self { base: base.to_owned(), nonce: nonce.to_owned(), sig: sig.to_owned(), memo }
+	}
+
+	pub fn chain(&self) -> ChainName {
+		self.base.chain
+	}
+
+	pub fn coin(&self) -> StableCoin {
+		self.base.coin
+	}
+
+	pub fn to_address(&self) -> &str {
+		&self.base.to_address
+	}
+
+	pub fn amount(&self) -> &str {
+		&self.base.amount
+	}
+
+	pub fn est_fee(&self) -> &str {
+		&self.base.est_fee
+	}
+
+	pub fn deadline(&self) -> u64 {
+		self.base.deadline
+	}
+
+	/// Default Permit2 deadline: 15 minutes from now.
+	pub fn default_deadline() -> u64 {
+		now_timestamp_secs() + 15 * 60
+	}
+}
+
+impl Display for PayOnchainPayloadNcw {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{:?}", self)
+	}
+}
+
+/// Unsigned inputs used to create one Permit2 message for a self-custodial bulk payment.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct BulkPayBase {
+	pub chain: ChainName,
+	pub batch: Vec<BulkPayItem>,
+	/// Human-readable total estimated fee.
+	pub tot_est_fee: String,
+	/// Permit expiry as a Unix timestamp in seconds.
+	pub deadline: u64,
+}
+
+impl Default for BulkPayBase {
+	fn default() -> Self {
+		Self {
+			chain: Default::default(),
+			batch: Default::default(),
+			tot_est_fee: Default::default(),
+			deadline: PayOnchainPayloadNcw::default_deadline(),
+		}
+	}
+}
+
+impl BulkPayBase {
+	pub fn fee_coin(&self) -> eyre::Result<StableCoin> {
+		self.batch
+			.last()
+			.map(BulkPayItem::coin)
+			.ok_or_eyre("Failed to find the last coin in batch")
+	}
+}
+
+/// Signed Permit2 payload for a self-custodial bulk payment.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+pub struct PayOnchainPayloadNcwBulk {
+	pub base: BulkPayBase,
+	/// Permit2 nonce encoded as a decimal string.
+	pub nonce: String,
+	/// Permit2 signature.
+	pub sig: String,
+}
+
+impl PayOnchainPayloadNcwBulk {
+	pub fn new(base: &BulkPayBase, nonce: &str, sig: &str) -> Self {
+		Self { base: base.to_owned(), nonce: nonce.to_owned(), sig: sig.to_owned() }
+	}
+}
+
+/// Request body for a self-custodial bulk payment.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+pub struct PayOnchainNcwBulkRequest {
+	pub payload: PayOnchainPayloadNcwBulk,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub scheds: Option<Vec<Sched>>,
+}
+
+impl PayOnchainNcwBulkRequest {
+	pub fn chain(&self) -> ChainName {
+		self.payload.base.chain
+	}
+}
+
+/// Receipt IDs created for a self-custodial bulk payment.
+#[derive(
+	Debug,
+	Default,
+	Clone,
+	Serialize,
+	Deserialize,
+	PartialEq,
+	Eq,
+	Archive,
+	RkyvSerialize,
+	RkyvDeserialize,
+)]
+pub struct BulkPayResponse {
+	pub receipt_ids: Vec<String>,
+}
+
+#[cfg(test)]
+mod public_payment_contract_tests {
+	use super::*;
+	use serde_json::json;
+
+	fn payment_payload() -> PayOnchainPayload {
+		PayOnchainPayload {
+			chain: ChainName::Sepolia,
+			coin: StableCoin::USDT,
+			to_address: "0x2222222222222222222222222222222222222222".to_owned(),
+			amount: "10.25".to_owned(),
+			memo: Memo::General,
+		}
+	}
+
+	fn ncw_base() -> PayOnchainPayloadNcwBase {
+		PayOnchainPayloadNcwBase {
+			chain: ChainName::Sepolia,
+			coin: StableCoin::USDT,
+			to_address: "0x2222222222222222222222222222222222222222".to_owned(),
+			amount: "10.25".to_owned(),
+			est_fee: "0.12".to_owned(),
+			deadline: 1_893_456_000,
+		}
+	}
+
+	#[test]
+	fn managed_payment_request_keeps_the_api_wrapper() {
+		let request = PayOnchainRequest { payload: payment_payload(), sched: None };
+
+		assert_eq!(
+			serde_json::to_value(request).unwrap(),
+			json!({
+				"payload": {
+					"chain": "Sepolia",
+					"coin": "USDT",
+					"to_address": "0x2222222222222222222222222222222222222222",
+					"amount": "10.25",
+					"memo": "General"
+				}
+			})
+		);
+	}
+
+	#[test]
+	fn self_custodial_requests_match_the_public_api_shapes() {
+		let payload = PayOnchainPayloadNcw {
+			base: ncw_base(),
+			nonce: "0".to_owned(),
+			sig: "0xpermit-signature".to_owned(),
+			memo: Memo::General,
+		};
+		let request = PayOnchainNcwRequest { payload, sched: None };
+
+		assert_eq!(
+			serde_json::to_value(request).unwrap(),
+			json!({
+				"payload": {
+					"base": {
+						"chain": "Sepolia",
+						"coin": "USDT",
+						"to_address": "0x2222222222222222222222222222222222222222",
+						"amount": "10.25",
+						"est_fee": "0.12",
+						"deadline": 1_893_456_000_u64
+					},
+					"nonce": "0",
+					"sig": "0xpermit-signature",
+					"memo": "General"
+				}
+			})
+		);
+
+		let batch = vec![
+			BulkPayItem::new(
+				StableCoin::USDT,
+				"0x2222222222222222222222222222222222222222",
+				"10.25",
+				&Memo::General,
+			),
+			BulkPayItem::new(
+				StableCoin::USDC,
+				"0x3333333333333333333333333333333333333333",
+				"2.50",
+				&Memo::General,
+			),
+		];
+		let request = PayOnchainNcwBulkRequest {
+			payload: PayOnchainPayloadNcwBulk {
+				base: BulkPayBase {
+					chain: ChainName::Sepolia,
+					batch,
+					tot_est_fee: "0.24".to_owned(),
+					deadline: 1_893_456_000,
+				},
+				nonce: "1".to_owned(),
+				sig: "0xbulk-permit-signature".to_owned(),
+			},
+			scheds: None,
+		};
+		let serialized = serde_json::to_value(request).unwrap();
+
+		assert!(serialized.get("scheds").is_none());
+		assert_eq!(serialized["payload"]["base"]["batch"].as_array().unwrap().len(), 2);
+		assert_eq!(serialized["payload"]["base"]["tot_est_fee"], "0.24");
+	}
+
+	#[test]
+	fn bulk_pay_response_keeps_storage_archive_compatibility() {
+		let response =
+			BulkPayResponse { receipt_ids: vec!["receipt-1".to_owned(), "receipt-2".to_owned()] };
+		let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&response).unwrap();
+		let decoded = rkyv::from_bytes::<BulkPayResponse, rkyv::rancor::Error>(&bytes).unwrap();
+
+		assert_eq!(decoded, response);
+	}
+}
+
 #[derive(
 	Archive,
 	RkyvSerialize,

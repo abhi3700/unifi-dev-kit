@@ -47,20 +47,26 @@ async fn main() -> eyre::Result<()> {
 	.unwrap_or_else(|e| panic!("{}", e.to_string().red().bold()));
 
 	let mut count = receipts.len();
+	let mut cursor = receipts.last().map(|receipt| receipt.id.clone());
 	for receipt in receipts.into_iter() {
 		display_pay_receipt(receipt);
 	}
 
-	while let Ok(OcPayHistory { receipts, has_next, .. }) = sdk
-		.get_ocp_receipts(
-			user_id,
-			true,
-			false,
-			Some(PayHistoryFilterParams { next_or_previous: Some(true), ..Default::default() }),
-		)
-		.await
-	{
+	while let Some(cursor_receipt_id) = cursor {
+		let Ok(OcPayHistory { receipts, has_next, .. }) = sdk
+			.get_ocp_receipts_with_cursor(
+				user_id,
+				true,
+				false,
+				Some(PayHistoryFilterParams { next_or_previous: Some(true), ..Default::default() }),
+				Some(&cursor_receipt_id),
+			)
+			.await
+		else {
+			break;
+		};
 		count += receipts.len();
+		cursor = receipts.last().map(|receipt| receipt.id.clone());
 		if !receipts.is_empty() {
 			println!("========================= NEXT ... =========================");
 		}

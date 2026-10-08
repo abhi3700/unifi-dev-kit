@@ -1,0 +1,18 @@
+### Deposit
+@name = Deposit
+@details = View deposit address(es).
+
+### Environment Variables
+@HOST={{base_url}}
+@AUTH_HEADER=Authorization: Bearer {{api_key}}
+@USER_ID={{user_id}}
+
+
+### Deposit address for a chain
+@CHAIN=Sepolia
+GET {{HOST}}/wallet/address/{{USER_ID}}/{{CHAIN}}
+{{AUTH_HEADER}}
+
+### Deposit addresses for all supported chain protocols
+GET {{HOST}}/wallet/addresses/{{USER_ID}}
+{{AUTH_HEADER}}

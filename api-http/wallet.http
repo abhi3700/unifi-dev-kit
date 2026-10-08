@@ -1,60 +1,38 @@
-### Wallet API — Manage & View Balances
+### Wallet
 @name = Wallet
 @details = View balances of assets across chains.
 
 ### Environment Variables
-@HOST= {{base_url}}
+@HOST={{base_url}}
 @USER_ID={{user_id}}
-@AUTH_HEADER = Authorization: Bearer {{api_key}}
+@AUTH_HEADER=Authorization: Bearer {{api_key}}
 
-###
-# @name Health
-GET {{HOST}}/healthz
-
-###
-# @name GetUserWalletAddress
-GET {{HOST}}/wallet/address/{{USER_ID}}/Ethereum
+### Stablecoin balance on one chain
+# @name GetOnchainCoinBalance
+@CHAIN=Sepolia
+@COIN=USDT
+GET {{HOST}}/wallet/onchain/balance/{{USER_ID}}/{{CHAIN}}/{{COIN}}
 {{AUTH_HEADER}}
 
-###
-# @name GetUserWalletAddresses
-GET {{HOST}}/wallet/addresses/{{USER_ID}}
+### All stablecoin balances on one chain
+# @name GetOnchainAllCoinBalances
+@CHAIN=Sepolia
+GET {{HOST}}/wallet/onchain/balances/{{USER_ID}}/{{CHAIN}}
 {{AUTH_HEADER}}
 
-### 
-# @name FetchPreOcpNetBalance
-@chain=Sepolia
-@coin=USDT
-GET {{HOST}}/payment/onchain/net_balance/{{USER_ID}}/{{chain}}/{{coin}}
-{{AUTH_HEADER}}
-
-###
-# @name FetchPreOcpTotalEstFees
-@chain=Sepolia
-@coin=USDT
-GET {{HOST}}/payment/onchain/est_fee/{{USER_ID}}/{{chain}}/{{coin}}
-{{AUTH_HEADER}}
-
-###
-# @name FetchPreOcpBalanceAndEstFees
-@chain=Sepolia
-@coin=USDT
-GET {{HOST}}/payment/onchain/balance_est_fee/{{USER_ID}}/{{chain}}/{{coin}}
-{{AUTH_HEADER}}
-
-###
+### All wallet balances
 # @name GetWalletBalances
 GET {{HOST}}/wallet/balances/{{USER_ID}}
 {{AUTH_HEADER}}
 
-###
+### Wallet balances grouped by chain
 # @name GetWalletBalancesByChain
-@chain=Sepolia
-GET {{HOST}}/wallet/balances/by_chain/{{USER_ID}}/{{chain}}
+@CHAIN=Sepolia
+GET {{HOST}}/wallet/balances/by_chain/{{USER_ID}}/{{CHAIN}}
 {{AUTH_HEADER}}
 
-###
+### Wallet balances grouped by stablecoin
 # @name GetWalletBalancesByCoin
-@coin=USDC
-GET {{HOST}}/wallet/balances/by_coin/{{USER_ID}}/{{coin}}
+@COIN=USDT
+GET {{HOST}}/wallet/balances/by_coin/{{USER_ID}}/{{COIN}}
 {{AUTH_HEADER}}

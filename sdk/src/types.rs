@@ -30,11 +30,21 @@ pub enum ApiHandler {
 	GetUserContactsByName,
 
 	/* Payment Onchain */
-	FetchPreOcpNetOnchainBalance,
-	FetchPreOcpTotalEstFees,
-	FetchPreOcpBalanceAndEstFees,
+	FetchPreOcpNetBalance,
+	FetchPreOcpTotalEstFee,
+	FetchPreOcpBalanceAndEstFee,
+	FetchPreOcpBalanceAndEstFeeNcw,
+	FetchPreOcpBalanceAndEstFeeNcwBulkPay,
+	PreFetchNcwBalanceFeeParams,
 	RequestFaucet,
 	PayOnchain,
+	PayOnchainMerchant,
+	PayOnchainMerchantNcw,
+	GetPaymentSessionStatus,
+	CreateDomainPermitForSig,
+	CreateDomainPermitForSigBulkPay,
+	PayOnchainNcw,
+	BulkPayNcw,
 	FliqNotifyPayer,
 	GetOcpReceipt,
 	GetOcpReceipts,
@@ -91,13 +101,27 @@ impl ApiHandler {
 			AH::GetWalletBalancesByCoin => "/wallet/balances/by_coin/{user_id}/{coin}",
 
 			/* Payment Onchain */
-			AH::FetchPreOcpNetOnchainBalance =>
-				"/payment/onchain/net_balance/{user_id}/{chain}/{coin}",
-			AH::FetchPreOcpTotalEstFees => "/payment/onchain/est_fee/{user_id}/{chain}/{coin}",
-			AH::FetchPreOcpBalanceAndEstFees =>
+			AH::FetchPreOcpNetBalance => "/payment/onchain/net_balance/{user_id}/{chain}/{coin}",
+			AH::FetchPreOcpTotalEstFee => "/payment/onchain/est_fee/{user_id}/{chain}/{coin}",
+			AH::FetchPreOcpBalanceAndEstFee =>
 				"/payment/onchain/balance_est_fee/{user_id}/{chain}/{coin}",
+			AH::FetchPreOcpBalanceAndEstFeeNcw =>
+				"/payment/onchain/balance_est_fee_ncw/{user_id}/{is_fee_incl}",
+			AH::FetchPreOcpBalanceAndEstFeeNcwBulkPay =>
+				"/payment/onchain/balance_est_fee_ncw_bulkpay/{user_id}/{is_fee_incl}",
+			AH::PreFetchNcwBalanceFeeParams =>
+				"/payment/onchain/ncw/pre_fetch_balance_est_fee_params/{user_id}/{chain}/{coin}",
 			AH::RequestFaucet => "/faucet/{user_id}/{coin}/{chain}/{create_session}",
 			AH::PayOnchain => "/payment/onchain/{user_id}/{is_fee_incl}",
+			AH::PayOnchainMerchant =>
+				"/payment/onchain/merchant/{user_id}/{is_fee_incl}/{session_id}",
+			AH::PayOnchainMerchantNcw => "/payment/onchain/ncw/merchant/{user_id}/{session_id}",
+			AH::GetPaymentSessionStatus => "/payment/merchant/session/{session_id}",
+			AH::CreateDomainPermitForSig => "/payment/onchain/ncw/create_domain_permit/{user_id}",
+			AH::CreateDomainPermitForSigBulkPay =>
+				"/payment/onchain/ncw/create_domain_permit_bulkpay/{user_id}",
+			AH::PayOnchainNcw => "/payment/onchain/ncw/{user_id}",
+			AH::BulkPayNcw => "/payment/onchain/ncw_bulkpay/{user_id}",
 			AH::FliqNotifyPayer =>
 				"/payment/onchain/fliq/notify/payer/{pid}/{chain}/{coin}/{to_address}/{amount}",
 			AH::GetOcpReceipt => "/payment/onchain/receipt/{receipt_id}",
@@ -159,6 +183,68 @@ impl ApiHandler {
 			// Signature verification before this api call.
 			AH::CreateNcAuthChallenge | AH::GenerateJwtForNc => false,
 			_ => true,
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::ApiHandler as AH;
+
+	#[test]
+	fn public_api_paths_match_the_openapi_surface() {
+		let expected = [
+			(AH::Healthz, "/healthz"),
+			(AH::HealthCheck, "/health"),
+			(AH::GetUserWalletAddress, "/wallet/address/{user_id}/{chain}"),
+			(AH::GetUserWalletAddresses, "/wallet/addresses/{user_id}"),
+			(AH::GetOcChainCoinBalance, "/wallet/onchain/balance/{user_id}/{chain}/{coin}"),
+			(AH::GetOcChainAllCoinsBalances, "/wallet/onchain/balances/{user_id}/{chain}"),
+			(AH::GetWalletBalances, "/wallet/balances/{user_id}"),
+			(AH::GetWalletBalancesByChain, "/wallet/balances/by_chain/{user_id}/{chain}"),
+			(AH::GetWalletBalancesByCoin, "/wallet/balances/by_coin/{user_id}/{coin}"),
+			(AH::FetchPreOcpNetBalance, "/payment/onchain/net_balance/{user_id}/{chain}/{coin}"),
+			(AH::FetchPreOcpTotalEstFee, "/payment/onchain/est_fee/{user_id}/{chain}/{coin}"),
+			(
+				AH::FetchPreOcpBalanceAndEstFee,
+				"/payment/onchain/balance_est_fee/{user_id}/{chain}/{coin}",
+			),
+			(
+				AH::FetchPreOcpBalanceAndEstFeeNcw,
+				"/payment/onchain/balance_est_fee_ncw/{user_id}/{is_fee_incl}",
+			),
+			(
+				AH::FetchPreOcpBalanceAndEstFeeNcwBulkPay,
+				"/payment/onchain/balance_est_fee_ncw_bulkpay/{user_id}/{is_fee_incl}",
+			),
+			(
+				AH::PreFetchNcwBalanceFeeParams,
+				"/payment/onchain/ncw/pre_fetch_balance_est_fee_params/{user_id}/{chain}/{coin}",
+			),
+			(AH::PayOnchain, "/payment/onchain/{user_id}/{is_fee_incl}"),
+			(
+				AH::PayOnchainMerchant,
+				"/payment/onchain/merchant/{user_id}/{is_fee_incl}/{session_id}",
+			),
+			(AH::CreateDomainPermitForSig, "/payment/onchain/ncw/create_domain_permit/{user_id}"),
+			(
+				AH::CreateDomainPermitForSigBulkPay,
+				"/payment/onchain/ncw/create_domain_permit_bulkpay/{user_id}",
+			),
+			(AH::PayOnchainNcw, "/payment/onchain/ncw/{user_id}"),
+			(AH::BulkPayNcw, "/payment/onchain/ncw_bulkpay/{user_id}"),
+			(AH::PayOnchainMerchantNcw, "/payment/onchain/ncw/merchant/{user_id}/{session_id}"),
+			(AH::GetPaymentSessionStatus, "/payment/merchant/session/{session_id}"),
+			(AH::GetOcpReceipt, "/payment/onchain/receipt/{receipt_id}"),
+			(
+				AH::GetOcpReceipts,
+				"/payment/onchain/receipts/{user_id}/{sort_by_latest}/{from_start}",
+			),
+		];
+
+		assert_eq!(expected.len(), 25);
+		for (handler, path) in expected {
+			assert_eq!(handler.path(), path);
 		}
 	}
 }
