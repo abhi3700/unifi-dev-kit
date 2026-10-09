@@ -19,18 +19,37 @@ GET {{HOST}}/payment/merchant/session/{{SESSION_ID}}
 GET {{HOST}}/payment/onchain/receipt/{{RECEIPT_ID}}
 {{AUTH_HEADER}}
 
-### First page of payment receipts with an optional chain filter
-# @name GetOcpReceiptsFirstPage
 @SORT_BY_LATEST=true
-@FROM_START=true
+@FIRST_PAGE_FROM_START=true
+@NEXT_PAGE_FROM_START=false
 @LIMIT=20
 @CHAIN=Sepolia
-GET {{HOST}}/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}
+
+# -----------------------------------------------------------------------------
+# get_ocp_receipts: server-managed Redis pagination
+# -----------------------------------------------------------------------------
+
+### First page; stores the page boundary in Redis for 15 minutes
+# @name GetOcpReceiptsRedisFirstPage
+GET {{HOST}}/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{FIRST_PAGE_FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}
+{{AUTH_HEADER}}
+
+### Next page; automatically uses the Redis-cached boundary
+# @name GetOcpReceiptsRedisNextPage
+GET {{HOST}}/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{NEXT_PAGE_FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}&next_or_previous=true
+{{AUTH_HEADER}}
+
+# -----------------------------------------------------------------------------
+# get_ocp_receipts_with_cursor: explicit receipt-ID cursor pagination
+# -----------------------------------------------------------------------------
+
+### First page; no cursor is required
+# @name GetOcpReceiptsCursorFirstPage
+GET {{HOST}}/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{FIRST_PAGE_FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}
 {{AUTH_HEADER}}
 
 ### Next page; use the last receipt ID returned by the current page
-# @name GetOcpReceiptsNextPage
-@FROM_START=false
+# @name GetOcpReceiptsCursorNextPage
 @CURSOR_RECEIPT_ID=replace-with-last-receipt-id
-GET {{HOST}}/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}&next_or_previous=true&cursor={{CURSOR_RECEIPT_ID}}
+GET {{HOST}}/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{NEXT_PAGE_FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}&next_or_previous=true&cursor={{CURSOR_RECEIPT_ID}}
 {{AUTH_HEADER}}
