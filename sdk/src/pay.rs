@@ -160,6 +160,9 @@ impl Sdk {
 	}
 
 	/// Pay a merchant from a UniFi-managed wallet.
+	///
+	/// Returns an error when the merchant session is already paid or another payment for the same
+	/// session is being submitted.
 	pub async fn pay_onchain_merchant(
 		&self,
 		user_id: &str,
@@ -222,6 +225,9 @@ impl Sdk {
 	}
 
 	/// Submit a signed self-custodial merchant payment.
+	///
+	/// Returns an error when the merchant session is already paid or another payment for the same
+	/// session is being submitted.
 	pub async fn pay_onchain_merchant_ncw(
 		&self,
 		user_id: &str,
