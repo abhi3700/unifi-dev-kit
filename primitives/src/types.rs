@@ -525,12 +525,32 @@ impl Currency {
 
 /* OC Pay history */
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PayHistoryDirection {
+	Sent,
+	Received,
+}
+
+impl Display for PayHistoryDirection {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{:?}", self)
+	}
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct PayHistoryFilterParams {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub chain: Option<ChainName>,
 	#[serde(skip_serializing_if = "Option::is_none")]
+	pub coin: Option<StableCoin>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub status: Option<OcPayReceiptStatus>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	/// `true` matches `Processing` and `Confirmed`; `false` excludes both states.
+	/// This filter cannot be combined with `status`.
+	pub pending: Option<bool>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub direction: Option<PayHistoryDirection>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub limit: Option<i64>,
 	#[serde(skip_serializing_if = "Option::is_none")]

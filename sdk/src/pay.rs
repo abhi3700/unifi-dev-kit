@@ -314,7 +314,8 @@ impl Sdk {
 	/// View a page of onchain payment receipts using an explicit receipt cursor.
 	///
 	/// Use the last receipt ID from the current page when loading the next page and the first
-	/// receipt ID when loading the previous page.
+	/// receipt ID when loading the previous page. Continuation requests must reuse the same filters
+	/// as the first page.
 	pub async fn get_ocp_receipts_with_cursor(
 		&self,
 		user_id: &str,
@@ -333,14 +334,34 @@ impl Sdk {
 		let mut query = Vec::new();
 
 		if let Some(filter) = filter {
-			let PayHistoryFilterParams { chain, status, limit, next_or_previous } = filter;
+			let PayHistoryFilterParams {
+				chain,
+				coin,
+				status,
+				pending,
+				direction,
+				limit,
+				next_or_previous,
+			} = filter;
 
 			if let Some(chain) = chain {
 				query.push(format!("chain={chain}"));
 			}
 
+			if let Some(coin) = coin {
+				query.push(format!("coin={coin}"));
+			}
+
 			if let Some(status) = status {
 				query.push(format!("status={status}"));
+			}
+
+			if let Some(pending) = pending {
+				query.push(format!("pending={pending}"));
+			}
+
+			if let Some(direction) = direction {
+				query.push(format!("direction={direction}"));
 			}
 
 			if let Some(limit) = limit {
