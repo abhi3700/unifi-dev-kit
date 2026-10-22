@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use unifi_sdk_primitives::{
 	types::{
 		ChainName, ChainProtocol, StableCoin, WalletBalances, WalletBalancesByChain,
-		WalletBalancesByCoin,
+		WalletBalancesByCoin, WalletBalancesByCoinChainDetails,
 	},
 	utils::sanitize_address,
 };
@@ -18,6 +18,25 @@ impl Sdk {
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<WalletBalances>(resp).await
+	}
+
+	/// Get the latest wallet balance for one coin-chain pair.
+	pub async fn get_wallet_balance_by_pair(
+		&self,
+		user_id: &str,
+		chain: ChainName,
+		coin: StableCoin,
+	) -> eyre::Result<WalletBalancesByCoinChainDetails> {
+		let handler = ApiHandler::GetWalletBalanceByPair;
+		let path = handler.fill_path_ordered(&[
+			user_id.to_owned(),
+			chain.to_string(),
+			coin.to_string(),
+		])?;
+		let url = format!("{}{}", self.api_base_url, path);
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
+
+		Sdk::process_response::<WalletBalancesByCoinChainDetails>(resp).await
 	}
 
 	pub async fn get_user_wallet_address(

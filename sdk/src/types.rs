@@ -56,6 +56,7 @@ pub enum ApiHandler {
 	GetOcChainCoinBalance,
 	GetOcChainAllCoinsBalances,
 	GetWalletBalances,
+	GetWalletBalanceByPair,
 	GetWalletBalancesByChain,
 	GetWalletBalancesByCoin,
 
@@ -97,6 +98,7 @@ impl ApiHandler {
 			AH::GetOcChainCoinBalance => "/wallet/onchain/balance/{user_id}/{chain}/{coin}",
 			AH::GetOcChainAllCoinsBalances => "/wallet/onchain/balances/{user_id}/{chain}",
 			AH::GetWalletBalances => "/wallet/balances/{user_id}",
+			AH::GetWalletBalanceByPair => "/wallet/balance/by_pair/{user_id}/{chain}/{coin}",
 			AH::GetWalletBalancesByChain => "/wallet/balances/by_chain/{user_id}/{chain}",
 			AH::GetWalletBalancesByCoin => "/wallet/balances/by_coin/{user_id}/{coin}",
 
@@ -201,6 +203,7 @@ mod tests {
 			(AH::GetOcChainCoinBalance, "/wallet/onchain/balance/{user_id}/{chain}/{coin}"),
 			(AH::GetOcChainAllCoinsBalances, "/wallet/onchain/balances/{user_id}/{chain}"),
 			(AH::GetWalletBalances, "/wallet/balances/{user_id}"),
+			(AH::GetWalletBalanceByPair, "/wallet/balance/by_pair/{user_id}/{chain}/{coin}"),
 			(AH::GetWalletBalancesByChain, "/wallet/balances/by_chain/{user_id}/{chain}"),
 			(AH::GetWalletBalancesByCoin, "/wallet/balances/by_coin/{user_id}/{coin}"),
 			(AH::FetchPreOcpNetBalance, "/payment/onchain/net_balance/{user_id}/{chain}/{coin}"),
@@ -242,7 +245,7 @@ mod tests {
 			),
 		];
 
-		assert_eq!(expected.len(), 25);
+		assert_eq!(expected.len(), 26);
 		for (handler, path) in expected {
 			assert_eq!(handler.path(), path);
 		}

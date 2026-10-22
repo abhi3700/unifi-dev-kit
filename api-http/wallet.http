@@ -25,6 +25,13 @@ GET {{HOST}}/wallet/onchain/balances/{{USER_ID}}/{{CHAIN}}
 GET {{HOST}}/wallet/balances/{{USER_ID}}
 {{AUTH_HEADER}}
 
+### Latest wallet balance for one stablecoin-chain pair
+# @name GetWalletBalanceByPair
+@CHAIN=Sepolia
+@COIN=USDT
+GET {{HOST}}/wallet/balance/by_pair/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+{{AUTH_HEADER}}
+
 ### Wallet balances grouped by chain
 # @name GetWalletBalancesByChain
 @CHAIN=Sepolia
