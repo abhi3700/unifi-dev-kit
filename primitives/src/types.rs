@@ -2020,7 +2020,6 @@ impl ApiMetadata {
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct ApiKey {
 	pub name: String,
-	pub value: String,
 	pub created_at: i64,
 }
 
@@ -2028,9 +2027,24 @@ impl From<ApiKey> for Bson {
 	fn from(api_key: ApiKey) -> Self {
 		BsonDocument(doc! {
 			"name": api_key.name,
-			"value": api_key.value,
 			"created_at": api_key.created_at,
 		})
+	}
+}
+
+#[cfg(test)]
+mod api_key_contract_tests {
+	use super::*;
+	use serde_json::json;
+
+	#[test]
+	fn one_time_api_key_summary_never_contains_secret_material() {
+		let key = ApiKey { name: "checkout".to_string(), created_at: 42 };
+
+		assert_eq!(
+			serde_json::to_value(key).unwrap(),
+			json!({ "name": "checkout", "created_at": 42 })
+		);
 	}
 }
 
