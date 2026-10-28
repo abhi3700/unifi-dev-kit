@@ -432,6 +432,41 @@ pub struct WalletBalancesByCoinChainDetails {
 	pub value_usd: String,
 }
 
+/// Latest and finalized net balances for one selected coin-chain pair.
+///
+/// `balance` retains the existing two-decimal latest-block contract. The exact human-readable
+/// balances and backend-derived finality state let focused payment UIs explain the difference
+/// without comparing rounded display strings.
+#[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
+pub struct WalletBalanceByPairDetails {
+	/// Existing two-decimal latest-block balance. E.g. 10.12 USDT
+	pub balance: String,
+	/// Exact latest-block balance in human units. E.g. 10.123456 USDT
+	pub latest_balance: String,
+	/// Two-decimal USD value of the latest-block balance. \
+	/// E.g. 10.123456 • 0.9996 = 10.1194 ~ $10.12
+	pub latest_value_usd: String,
+	/// Exact finalized-block balance in human units, using the same net-balance formula. \
+	/// E.g. 9.123456 USDT
+	pub finalized_balance: String,
+	/// Two-decimal USD value of the finalized balance.
+	/// E.g. 9.123456 * 0.9996 = 9.1198 ~ $9.12
+	pub finalized_value_usd: String,
+	/// Direction of the exact difference between the latest and finalized balances.
+	pub finality_status: WalletBalanceFinalityStatus,
+	/// Exact absolute difference between the latest and finalized balances in human units.
+	pub finality_delta: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WalletBalanceFinalityStatus {
+	#[default]
+	Synced,
+	IncomingPending,
+	OutgoingPending,
+}
+
 /// All supported wallet assets, ordered by their total USD value.
 ///
 /// A sequence is used instead of a map because the order is part of the API response contract.
