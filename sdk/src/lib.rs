@@ -5,6 +5,7 @@ use unifi_sdk_primitives::ApiResponse;
 
 pub mod api;
 pub mod auth;
+pub mod contacts;
 pub mod errors;
 pub mod health;
 pub mod pay;

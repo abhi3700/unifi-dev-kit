@@ -367,6 +367,7 @@ pub fn compute_est_fee_ncw(
 		gas_price,
 		gas_token_price,
 		coin_price,
+		..
 	} = pre_ocp_values;
 
 	let coin_decimals = coin.decimals();

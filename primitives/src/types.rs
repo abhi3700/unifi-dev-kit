@@ -42,8 +42,9 @@ impl Mode {
 	}
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ChainProtocol {
+	#[default]
 	Evm,
 	// Tron,
 	// Solana,
@@ -77,6 +78,58 @@ impl ChainProtocol {
 		use ChainProtocol as C;
 		&[C::Evm /* , Tron, Solana, Near, Eos, Substrate */]
 	}
+}
+
+/// A saved payment recipient. Addresses are unique within a chain protocol, so one EVM contact
+/// can be reused across Ethereum, Polygon, and every other EVM network.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct Contact {
+	pub id: String,
+	pub name: String,
+	pub protocol: ChainProtocol,
+	pub address: String,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ContactPage {
+	pub contacts: Vec<Contact>,
+	pub total: u64,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub next_cursor: Option<String>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ContactListParams {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub protocol: Option<ChainProtocol>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub search: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub cursor: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub limit: Option<u32>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct AddContactPayload {
+	pub name: String,
+	pub protocol: ChainProtocol,
+	pub address: String,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct AddContactMainPayload {
+	pub contacts: Vec<AddContactPayload>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct UpdateContactPayload {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub name: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub protocol: Option<ChainProtocol>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub address: Option<String>,
 }
 
 // More would be added later.
@@ -992,6 +1045,13 @@ pub struct PreOcpValues {
 	pub is_coin_allowance_zero: bool,
 	pub balance: String,
 	pub est_fee: String,
+	/// Saved recipients for the selected chain protocol when explicitly requested by the client.
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub contacts: Vec<Contact>,
+	#[serde(default)]
+	pub contacts_total: u64,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub contacts_next_cursor: Option<String>,
 }
 
 /// Pre-OCP Values using NCW Params (for calc) for single pay.
@@ -1266,6 +1326,13 @@ pub struct PreOcpValuesNcwParams {
 	/// ### Usage
 	/// - required in compute est. fee (in stablecoin).
 	pub coin_price: f64,
+	/// Saved recipients for the selected chain protocol when explicitly requested by the client.
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub contacts: Vec<Contact>,
+	#[serde(default)]
+	pub contacts_total: u64,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub contacts_next_cursor: Option<String>,
 }
 
 /// Pre-OCP Values for NCW Params for bulk pay

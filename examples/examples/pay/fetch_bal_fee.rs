@@ -29,7 +29,7 @@ async fn main() -> eyre::Result<()> {
 
 	println!("================================================");
 
-	let PreOcpValues { is_coin_allowance_zero, balance: net_balance, est_fee } = with_spinner(
+	let PreOcpValues { is_coin_allowance_zero, balance: net_balance, est_fee, .. } = with_spinner(
 		spinoff::spinners::Dots.into(),
 		"⏳ Fetching balance & fees...".to_string(),
 		sdk.fetch_pre_ocp_balance_and_est_fee(

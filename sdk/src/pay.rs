@@ -57,6 +57,16 @@ impl Sdk {
 		user_id: &str,
 		payload: PreOcpPayload,
 	) -> eyre::Result<PreOcpValues> {
+		self.fetch_pre_ocp_balance_and_est_fee_with_contacts(user_id, payload, false)
+			.await
+	}
+
+	pub async fn fetch_pre_ocp_balance_and_est_fee_with_contacts(
+		&self,
+		user_id: &str,
+		payload: PreOcpPayload,
+		fetch_contacts: bool,
+	) -> eyre::Result<PreOcpValues> {
 		let PreOcpPayload { coin, chain } = payload;
 		let handler = ApiHandler::FetchPreOcpBalanceAndEstFee;
 		let path = handler.fill_path_ordered(&[
@@ -64,7 +74,7 @@ impl Sdk {
 			chain.to_string(),
 			coin.to_string(),
 		])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}?fetch_contacts={fetch_contacts}", self.api_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<PreOcpValues>(resp).await
@@ -110,6 +120,16 @@ impl Sdk {
 		user_id: &str,
 		payload: PreOcpPayload,
 	) -> eyre::Result<PreOcpValuesNcwParams> {
+		self.prefetch_ncw_balance_fee_params_with_contacts(user_id, payload, false)
+			.await
+	}
+
+	pub async fn prefetch_ncw_balance_fee_params_with_contacts(
+		&self,
+		user_id: &str,
+		payload: PreOcpPayload,
+		fetch_contacts: bool,
+	) -> eyre::Result<PreOcpValuesNcwParams> {
 		let PreOcpPayload { coin, chain } = payload;
 		let handler = ApiHandler::PreFetchNcwBalanceFeeParams;
 		let path = handler.fill_path_ordered(&[
@@ -117,7 +137,7 @@ impl Sdk {
 			chain.to_string(),
 			coin.to_string(),
 		])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}?fetch_contacts={fetch_contacts}", self.api_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<PreOcpValuesNcwParams>(resp).await

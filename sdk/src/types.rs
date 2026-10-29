@@ -26,7 +26,7 @@ pub enum ApiHandler {
 	DelUserContact,
 	UpdateUserContact,
 	GetUserContacts,
-	GetUserContactByUid,
+	GetUserContactById,
 	GetUserContactsByName,
 
 	/* Payment Onchain */
@@ -87,8 +87,8 @@ impl ApiHandler {
 
 			/* Contacts */
 			AH::GetUserContacts | AH::AddUserContacts => "/contacts/{user_id}",
-			AH::DelUserContact | AH::UpdateUserContact | AH::GetUserContactByUid =>
-				"/contacts/{user_id}/{uid}",
+			AH::DelUserContact | AH::UpdateUserContact | AH::GetUserContactById =>
+				"/contacts/{user_id}/{contact_id}",
 			AH::GetUserContactsByName => "/contacts/by_name/{user_id}/{name}",
 
 			/* Wallet */
