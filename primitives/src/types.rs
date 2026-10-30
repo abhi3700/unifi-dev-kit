@@ -399,8 +399,9 @@ impl StableCoin {
 
 /// All coins (network/gas + stablecoins) supported by OmniPay
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Coin {
+	#[default]
 	ETH,
 	POL,
 	// NOTE: For Sepolia testnet, use `Eth'
