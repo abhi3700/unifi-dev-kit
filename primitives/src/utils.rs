@@ -777,6 +777,43 @@ pub fn fmt_output(value: U256, coin_decimals: u8) -> eyre::Result<String> {
 	if value.is_zero() { Ok("0.00".to_string()) } else { Ok(format_units(value, coin_decimals)?) }
 }
 
+/// Add the gas-funding and approval cost returned by `request_eth_for_coins_approvals` to a
+/// freshly recomputed payment fee.
+///
+/// The API returns the cost in the default stablecoin's base units (currently USDT, 6 decimals),
+/// while the payment fee is denominated in the selected stablecoin. Convert base units before
+/// adding so DAI and future coins with different decimal precision recover the same USD amount.
+pub fn add_approval_cost_to_est_fee(
+	est_fee: &str,
+	fee_coin: StableCoin,
+	approval_cost: U256,
+) -> eyre::Result<String> {
+	let fee_decimals = fee_coin.decimals();
+	let cost_decimals = StableCoin::default_decimals();
+	let mut est_fee_u256 = parse_human_fmt_to_u256(est_fee, fee_decimals, false)?;
+
+	let converted_cost = if fee_decimals == cost_decimals {
+		approval_cost
+	} else if fee_decimals > cost_decimals {
+		let scale = U256::from(10_u8).pow(U256::from((fee_decimals - cost_decimals) as u32));
+		approval_cost
+			.checked_mul(scale)
+			.ok_or_eyre("Overflow while converting approval cost")?
+	} else {
+		let scale = U256::from(10_u8).pow(U256::from((cost_decimals - fee_decimals) as u32));
+		// Round upward so the displayed/recovered fee is never lower than the funded cost.
+		approval_cost
+			.checked_add(scale - U256::from(1_u8))
+			.ok_or_eyre("Overflow while rounding approval cost")? /
+			scale
+	};
+
+	est_fee_u256 = est_fee_u256
+		.checked_add(converted_cost)
+		.ok_or_eyre("Overflow while adding approval cost to estimated fee")?;
+	fmt_output(est_fee_u256, fee_decimals)
+}
+
 /// Get total spend
 ///
 /// ```
@@ -988,6 +1025,20 @@ mod tests {
 		assert_eq!(
 			update_req_allowance("1", StableCoin::DAI, "0", "0.112192", true).unwrap(),
 			"11.000000000000000000"
+		);
+	}
+
+	#[test]
+	fn approval_cost_uses_the_fee_coins_decimals() {
+		let approval_cost = U256::from(125_000_u64); // $0.125 in default 6-decimal units.
+
+		assert_eq!(
+			add_approval_cost_to_est_fee("0.25", StableCoin::USDT, approval_cost).unwrap(),
+			"0.375000"
+		);
+		assert_eq!(
+			add_approval_cost_to_est_fee("0.25", StableCoin::DAI, approval_cost).unwrap(),
+			"0.375000000000000000"
 		);
 	}
 
