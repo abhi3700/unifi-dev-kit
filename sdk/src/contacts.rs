@@ -39,7 +39,7 @@ impl Sdk {
 		&self,
 		user_id: &str,
 		payload: AddContactMainPayload,
-	) -> eyre::Result<()> {
+	) -> eyre::Result<Vec<Contact>> {
 		let handler = ApiHandler::AddUserContacts;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
 		let response = self
@@ -47,7 +47,7 @@ impl Sdk {
 			.json(&payload)
 			.send()
 			.await;
-		Sdk::process_response::<()>(response).await
+		Sdk::process_response::<Vec<Contact>>(response).await
 	}
 
 	pub async fn update_user_contact(

@@ -88,6 +88,9 @@ pub struct Contact {
 	pub name: String,
 	pub protocol: ChainProtocol,
 	pub address: String,
+	/// User-marked external wallet address that can receive funds on the user's behalf.
+	/// Must not equal the user's UniFi-managed address for this chain protocol.
+	pub is_own_wallet: bool,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -103,6 +106,8 @@ pub struct ContactListParams {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub protocol: Option<ChainProtocol>,
 	#[serde(skip_serializing_if = "Option::is_none")]
+	pub is_own_wallet: Option<bool>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub search: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub cursor: Option<String>,
@@ -115,6 +120,9 @@ pub struct AddContactPayload {
 	pub name: String,
 	pub protocol: ChainProtocol,
 	pub address: String,
+	/// Marks an external address controlled by the user. The protocol-matched UniFi-managed
+	/// address cannot be marked as an own-wallet contact.
+	pub is_own_wallet: bool,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -130,6 +138,10 @@ pub struct UpdateContactPayload {
 	pub protocol: Option<ChainProtocol>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub address: Option<String>,
+	/// Marks an external address controlled by the user. The protocol-matched UniFi-managed
+	/// address cannot be marked as an own-wallet contact.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub is_own_wallet: Option<bool>,
 }
 
 // More would be added later.
