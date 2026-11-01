@@ -10,7 +10,7 @@ impl Sdk {
 	) -> eyre::Result<NcAuthChallenge> {
 		let handler = ApiHandler::CreateNcAuthChallenge;
 		let path = handler.fill_path_ordered(&[address.to_string()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).json(&payload).send().await;
 
 		Sdk::process_response::<NcAuthChallenge>(resp).await
@@ -24,7 +24,7 @@ impl Sdk {
 	) -> eyre::Result<String> {
 		let handler = ApiHandler::GenerateJwtForNc;
 		let path = handler.fill_path_ordered(&[address.to_string()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).json(&payload).send().await;
 
 		Sdk::process_response::<String>(resp).await

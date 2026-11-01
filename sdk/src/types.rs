@@ -1,6 +1,21 @@
 use crate::errors::OmniPayError;
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ApiVersion {
+	#[default]
+	V1,
+}
+
+impl ApiVersion {
+	pub const fn prefix(self) -> &'static str {
+		match self {
+			Self::V1 => "/v1",
+		}
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum ApiHandler {
@@ -135,11 +150,16 @@ impl ApiHandler {
 		}
 	}
 
+	/// Adds the selected public API namespace to this version-neutral handler path.
+	pub fn versioned_path(&self, version: ApiVersion) -> String {
+		format!("{}{}", version.prefix(), self.path())
+	}
+
 	/// Replaces `{}`-wrapped placeholders in a given path using the provided parameters,
 	/// assuming the order of the parameters corresponds exactly to the order of placeholders.
 	///
 	/// # Arguments
-	/// - `template`: a path with placeholders (e.g. "/user/{coin}/{chain}")
+	/// - `template`: a relative API path with placeholders (e.g. "/user/{coin}/{chain}")
 	/// - `params`: a slice of values to substitute in order
 	///
 	/// # Returns
@@ -191,10 +211,10 @@ impl ApiHandler {
 
 #[cfg(test)]
 mod tests {
-	use super::ApiHandler as AH;
+	use super::{ApiHandler as AH, ApiVersion};
 
 	#[test]
-	fn public_api_paths_match_the_openapi_surface() {
+	fn public_api_paths_are_relative_and_versionable() {
 		let expected = [
 			(AH::Healthz, "/healthz"),
 			(AH::HealthCheck, "/health"),
@@ -248,6 +268,7 @@ mod tests {
 		assert_eq!(expected.len(), 26);
 		for (handler, path) in expected {
 			assert_eq!(handler.path(), path);
+			assert_eq!(handler.versioned_path(ApiVersion::V1), format!("/v1{path}"));
 		}
 	}
 }

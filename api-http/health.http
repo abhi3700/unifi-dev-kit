@@ -8,9 +8,9 @@
 
 ### fast 🏎️: API is live or not
 # @name Healthz
-GET {{HOST}}/healthz
+GET {{HOST}}/v1/healthz
 
 ### slow 🐢: Checks all its dependencies: DBs, Node RPC, ..
 # @name HealthCheck
-GET {{HOST}}/health
+GET {{HOST}}/v1/health
 {{AUTH_HEADER}}

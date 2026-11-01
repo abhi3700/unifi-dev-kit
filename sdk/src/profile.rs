@@ -10,7 +10,7 @@ impl Sdk {
 	) -> eyre::Result<()> {
 		let handler = ApiHandler::SetUserProfile;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).json(&user_profile).send().await;
 
 		Sdk::process_response::<()>(resp).await
@@ -19,7 +19,7 @@ impl Sdk {
 	pub async fn get_user_profile(&self, user_id: &str) -> eyre::Result<UserProfile> {
 		let handler = ApiHandler::GetUserProfile;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<UserProfile>(resp).await

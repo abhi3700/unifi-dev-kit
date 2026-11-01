@@ -10,7 +10,7 @@ impl Sdk {
 	) -> eyre::Result<String> {
 		let handler = ApiHandler::CreateSession;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let request = CreateSessionRequest { falcon_heartbeat };
 		let resp = self.with_auth(handler, self.client.post(url)).json(&request).send().await;
 
@@ -21,7 +21,7 @@ impl Sdk {
 	pub async fn get_session(&self, session_id: &str) -> eyre::Result<UserSession> {
 		let handler = ApiHandler::GetSession;
 		let path = handler.fill_path_ordered(&[session_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<UserSession>(resp).await

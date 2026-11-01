@@ -24,7 +24,7 @@ impl Sdk {
 			chain.to_string(),
 			coin.to_string(),
 		])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<String>(resp).await
@@ -44,7 +44,7 @@ impl Sdk {
 			chain.to_string(),
 			coin.to_string(),
 		])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<String>(resp).await
@@ -74,7 +74,7 @@ impl Sdk {
 			chain.to_string(),
 			coin.to_string(),
 		])?;
-		let url = format!("{}{}?fetch_contacts={fetch_contacts}", self.api_base_url, path);
+		let url = format!("{}{}?fetch_contacts={fetch_contacts}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<PreOcpValues>(resp).await
@@ -89,7 +89,7 @@ impl Sdk {
 	) -> eyre::Result<PreOcpValuesNcw> {
 		let handler = ApiHandler::FetchPreOcpBalanceAndEstFeeNcw;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), is_fee_incl.to_string()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).json(payload).send().await;
 
 		Sdk::process_response::<PreOcpValuesNcw>(resp).await
@@ -106,7 +106,7 @@ impl Sdk {
 	) -> eyre::Result<PreOcpValuesNcwBulk> {
 		let handler = ApiHandler::FetchPreOcpBalanceAndEstFeeNcwBulkPay;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), is_fee_incl.to_string()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let request = BulkPayItemRequest { chain, items: items.to_owned() };
 		let resp = self.with_auth(handler, self.client.post(url)).json(&request).send().await;
 
@@ -137,7 +137,7 @@ impl Sdk {
 			chain.to_string(),
 			coin.to_string(),
 		])?;
-		let url = format!("{}{}?fetch_contacts={fetch_contacts}", self.api_base_url, path);
+		let url = format!("{}{}?fetch_contacts={fetch_contacts}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<PreOcpValuesNcwParams>(resp).await
@@ -158,7 +158,7 @@ impl Sdk {
 			chain.to_string(),
 			create_session.to_string(),
 		])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).send().await;
 
 		Sdk::process_response::<()>(resp).await
@@ -173,7 +173,7 @@ impl Sdk {
 	) -> eyre::Result<String> {
 		let handler = ApiHandler::PayOnchain;
 		let path = handler.fill_path_ordered(&[user_id.to_string(), is_fee_incl.to_string()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).json(&request).send().await;
 
 		Sdk::process_response::<String>(resp).await
@@ -196,7 +196,7 @@ impl Sdk {
 			is_fee_incl.to_string(),
 			session_id.to_owned(),
 		])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).json(&payload).send().await;
 
 		Sdk::process_response::<String>(resp).await
@@ -210,7 +210,7 @@ impl Sdk {
 	) -> eyre::Result<DomainPermitForSig> {
 		let handler = ApiHandler::CreateDomainPermitForSig;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).json(base_payload).send().await;
 
 		Sdk::process_response::<DomainPermitForSig>(resp).await
@@ -224,7 +224,7 @@ impl Sdk {
 	) -> eyre::Result<DomainPermitForSig> {
 		let handler = ApiHandler::CreateDomainPermitForSigBulkPay;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).json(base_payload).send().await;
 
 		Sdk::process_response::<DomainPermitForSig>(resp).await
@@ -238,7 +238,7 @@ impl Sdk {
 	) -> eyre::Result<String> {
 		let handler = ApiHandler::PayOnchainNcw;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).json(&request).send().await;
 
 		Sdk::process_response::<String>(resp).await
@@ -256,7 +256,7 @@ impl Sdk {
 	) -> eyre::Result<String> {
 		let handler = ApiHandler::PayOnchainMerchantNcw;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), session_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).json(&payload).send().await;
 
 		Sdk::process_response::<String>(resp).await
@@ -270,7 +270,7 @@ impl Sdk {
 	) -> eyre::Result<BulkPayResponse> {
 		let handler = ApiHandler::BulkPayNcw;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.post(url)).json(&request).send().await;
 
 		Sdk::process_response::<BulkPayResponse>(resp).await
@@ -291,7 +291,7 @@ impl Sdk {
 			to_address,
 			amount,
 		])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<()>(resp).await
@@ -303,7 +303,7 @@ impl Sdk {
 	pub async fn get_payment_session_status(&self, session_id: &str) -> eyre::Result<String> {
 		let handler = ApiHandler::GetPaymentSessionStatus;
 		let path = handler.fill_path_ordered(&[session_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<String>(resp).await
@@ -313,7 +313,7 @@ impl Sdk {
 	pub async fn get_ocp_receipt(&self, receipt_id: &str) -> eyre::Result<OcPayReceipt> {
 		let handler = ApiHandler::GetOcpReceipt;
 		let path = handler.fill_path_ordered(&[receipt_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<OcPayReceipt>(resp).await
@@ -350,7 +350,7 @@ impl Sdk {
 			sort_by_latest.to_string(),
 			from_start.to_string(),
 		])?;
-		let mut url = format!("{}{}", self.api_base_url, path);
+		let mut url = format!("{}{}", self.api_endpoint_base_url, path);
 		let mut query = Vec::new();
 
 		if let Some(filter) = filter {

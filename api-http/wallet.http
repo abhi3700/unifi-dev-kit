@@ -11,35 +11,35 @@
 # @name GetOnchainCoinBalance
 @CHAIN=Sepolia
 @COIN=USDT
-GET {{HOST}}/wallet/onchain/balance/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+GET {{HOST}}/v1/wallet/onchain/balance/{{USER_ID}}/{{CHAIN}}/{{COIN}}
 {{AUTH_HEADER}}
 
 ### All stablecoin balances on one chain
 # @name GetOnchainAllCoinBalances
 @CHAIN=Sepolia
-GET {{HOST}}/wallet/onchain/balances/{{USER_ID}}/{{CHAIN}}
+GET {{HOST}}/v1/wallet/onchain/balances/{{USER_ID}}/{{CHAIN}}
 {{AUTH_HEADER}}
 
 ### All wallet balances
 # @name GetWalletBalances
-GET {{HOST}}/wallet/balances/{{USER_ID}}
+GET {{HOST}}/v1/wallet/balances/{{USER_ID}}
 {{AUTH_HEADER}}
 
 ### Comparable latest and finalized wallet balances for one stablecoin-chain pair
 # @name GetWalletBalanceByPair
 @CHAIN=Sepolia
 @COIN=USDT
-GET {{HOST}}/wallet/balance/by_pair/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+GET {{HOST}}/v1/wallet/balance/by_pair/{{USER_ID}}/{{CHAIN}}/{{COIN}}
 {{AUTH_HEADER}}
 
 ### Wallet balances grouped by chain
 # @name GetWalletBalancesByChain
 @CHAIN=Sepolia
-GET {{HOST}}/wallet/balances/by_chain/{{USER_ID}}/{{CHAIN}}
+GET {{HOST}}/v1/wallet/balances/by_chain/{{USER_ID}}/{{CHAIN}}
 {{AUTH_HEADER}}
 
 ### Wallet balances grouped by stablecoin
 # @name GetWalletBalancesByCoin
 @COIN=USDT
-GET {{HOST}}/wallet/balances/by_coin/{{USER_ID}}/{{COIN}}
+GET {{HOST}}/v1/wallet/balances/by_coin/{{USER_ID}}/{{COIN}}
 {{AUTH_HEADER}}

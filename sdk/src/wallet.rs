@@ -14,7 +14,7 @@ impl Sdk {
 	pub async fn get_wallet_balances(&self, user_id: &str) -> eyre::Result<WalletBalances> {
 		let handler = ApiHandler::GetWalletBalances;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<WalletBalances>(resp).await
@@ -33,7 +33,7 @@ impl Sdk {
 			chain.to_string(),
 			coin.to_string(),
 		])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		let details = Sdk::process_response::<WalletBalanceByPairDetails>(resp).await?;
@@ -56,7 +56,7 @@ impl Sdk {
 			chain.to_string(),
 			coin.to_string(),
 		])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<WalletBalanceByPairDetails>(resp).await
@@ -73,7 +73,7 @@ impl Sdk {
 
 		let handler = ApiHandler::GetUserWalletAddress;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 		Sdk::process_response::<String>(resp).await
 	}
@@ -89,7 +89,7 @@ impl Sdk {
 
 		let handler = ApiHandler::GetUserWalletAddresses;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 		Sdk::process_response::<HashMap<ChainProtocol, String>>(resp).await
 	}
@@ -107,7 +107,7 @@ impl Sdk {
 			chain.to_string(),
 			coin.to_string(),
 		])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<String>(resp).await
@@ -121,7 +121,7 @@ impl Sdk {
 	) -> eyre::Result<HashMap<StableCoin, String>> {
 		let handler = ApiHandler::GetOcChainAllCoinsBalances;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<HashMap<StableCoin, String>>(resp).await
@@ -138,7 +138,7 @@ impl Sdk {
 	) -> eyre::Result<WalletBalancesByChain> {
 		let handler = ApiHandler::GetWalletBalancesByChain;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<WalletBalancesByChain>(resp).await
@@ -155,7 +155,7 @@ impl Sdk {
 	) -> eyre::Result<WalletBalancesByCoin> {
 		let handler = ApiHandler::GetWalletBalancesByCoin;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), coin.to_string()])?;
-		let url = format!("{}{}", self.api_base_url, path);
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<WalletBalancesByCoin>(resp).await

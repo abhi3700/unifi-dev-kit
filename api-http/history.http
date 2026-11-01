@@ -10,13 +10,13 @@
 ### Merchant payment session ID
 # @name GetPaymentSessionStatus
 @SESSION_ID=replace-with-payment-session-id
-GET {{HOST}}/payment/merchant/session/{{SESSION_ID}}
+GET {{HOST}}/v1/payment/merchant/session/{{SESSION_ID}}
 {{AUTH_HEADER}}
 
 ### One payment receipt
 # @name GetOcpReceipt
 @RECEIPT_ID=1r24349050eb039cd05af1800c
-GET {{HOST}}/payment/onchain/receipt/{{RECEIPT_ID}}
+GET {{HOST}}/v1/payment/onchain/receipt/{{RECEIPT_ID}}
 {{AUTH_HEADER}}
 
 @SORT_BY_LATEST=true
@@ -36,12 +36,12 @@ GET {{HOST}}/payment/onchain/receipt/{{RECEIPT_ID}}
 
 ### First page; stores the page boundary in Redis for 15 minutes
 # @name GetOcpReceiptsRedisFirstPage
-GET {{HOST}}/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{FIRST_PAGE_FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}&coin={{COIN}}&pending={{PENDING}}&direction={{DIRECTION}}
+GET {{HOST}}/v1/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{FIRST_PAGE_FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}&coin={{COIN}}&pending={{PENDING}}&direction={{DIRECTION}}
 {{AUTH_HEADER}}
 
 ### Next page; automatically uses the Redis-cached boundary
 # @name GetOcpReceiptsRedisNextPage
-GET {{HOST}}/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{NEXT_PAGE_FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}&coin={{COIN}}&pending={{PENDING}}&direction={{DIRECTION}}&next_or_previous=true
+GET {{HOST}}/v1/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{NEXT_PAGE_FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}&coin={{COIN}}&pending={{PENDING}}&direction={{DIRECTION}}&next_or_previous=true
 {{AUTH_HEADER}}
 
 # -----------------------------------------------------------------------------
@@ -50,11 +50,11 @@ GET {{HOST}}/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{NEXT_PAGE
 
 ### First page; no cursor is required
 # @name GetOcpReceiptsCursorFirstPage
-GET {{HOST}}/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{FIRST_PAGE_FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}&coin={{COIN}}&pending={{PENDING}}&direction={{DIRECTION}}
+GET {{HOST}}/v1/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{FIRST_PAGE_FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}&coin={{COIN}}&pending={{PENDING}}&direction={{DIRECTION}}
 {{AUTH_HEADER}}
 
 ### Next page; use the last receipt ID returned by the current page
 # @name GetOcpReceiptsCursorNextPage
 @CURSOR_RECEIPT_ID=replace-with-last-receipt-id
-GET {{HOST}}/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{NEXT_PAGE_FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}&coin={{COIN}}&pending={{PENDING}}&direction={{DIRECTION}}&next_or_previous=true&cursor={{CURSOR_RECEIPT_ID}}
+GET {{HOST}}/v1/payment/onchain/receipts/{{USER_ID}}/{{SORT_BY_LATEST}}/{{NEXT_PAGE_FROM_START}}?limit={{LIMIT}}&chain={{CHAIN}}&coin={{COIN}}&pending={{PENDING}}&direction={{DIRECTION}}&next_or_previous=true&cursor={{CURSOR_RECEIPT_ID}}
 {{AUTH_HEADER}}

@@ -18,7 +18,7 @@ impl Sdk {
 		let response = self
 			.with_auth(
 				handler,
-				self.client.get(format!("{}{}", self.api_base_url, path)).query(params),
+				self.client.get(format!("{}{}", self.api_endpoint_base_url, path)).query(params),
 			)
 			.send()
 			.await;
@@ -29,7 +29,7 @@ impl Sdk {
 		let handler = ApiHandler::GetUserContactById;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), contact_id.to_owned()])?;
 		let response = self
-			.with_auth(handler, self.client.get(format!("{}{}", self.api_base_url, path)))
+			.with_auth(handler, self.client.get(format!("{}{}", self.api_endpoint_base_url, path)))
 			.send()
 			.await;
 		Sdk::process_response::<Contact>(response).await
@@ -43,7 +43,7 @@ impl Sdk {
 		let handler = ApiHandler::AddUserContacts;
 		let path = handler.fill_path_ordered(&[user_id.to_owned()])?;
 		let response = self
-			.with_auth(handler, self.client.post(format!("{}{}", self.api_base_url, path)))
+			.with_auth(handler, self.client.post(format!("{}{}", self.api_endpoint_base_url, path)))
 			.json(&payload)
 			.send()
 			.await;
@@ -59,7 +59,7 @@ impl Sdk {
 		let handler = ApiHandler::UpdateUserContact;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), contact_id.to_owned()])?;
 		let response = self
-			.with_auth(handler, self.client.put(format!("{}{}", self.api_base_url, path)))
+			.with_auth(handler, self.client.put(format!("{}{}", self.api_endpoint_base_url, path)))
 			.json(payload)
 			.send()
 			.await;
@@ -70,7 +70,10 @@ impl Sdk {
 		let handler = ApiHandler::DelUserContact;
 		let path = handler.fill_path_ordered(&[user_id.to_owned(), contact_id.to_owned()])?;
 		let response = self
-			.with_auth(handler, self.client.delete(format!("{}{}", self.api_base_url, path)))
+			.with_auth(
+				handler,
+				self.client.delete(format!("{}{}", self.api_endpoint_base_url, path)),
+			)
 			.send()
 			.await;
 		Sdk::process_response::<()>(response).await

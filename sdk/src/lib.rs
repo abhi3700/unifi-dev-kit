@@ -1,4 +1,4 @@
-use crate::types::ApiHandler;
+use crate::types::{ApiHandler, ApiVersion};
 use errors::OmniPayError;
 use reqwest::{Client as reqwestClient, Error as reqwestError, Response as reqwestResponse};
 use unifi_sdk_primitives::ApiResponse;
@@ -39,17 +39,37 @@ macro_rules! http_error_message {
 #[derive(Clone)]
 pub struct Sdk {
 	pub(crate) client: reqwestClient,
+	/// Unversioned service root.
 	pub(crate) api_base_url: String,
 	pub(crate) api_key: String,
+	api_version: ApiVersion,
+	api_endpoint_base_url: String,
 }
 
 impl Sdk {
 	pub fn new(api_base_url: &str, api_key: &str) -> Self {
+		Self::new_with_version(api_base_url, api_key, ApiVersion::V1)
+	}
+
+	pub fn new_with_version(api_base_url: &str, api_key: &str, api_version: ApiVersion) -> Self {
+		let api_base_url = api_base_url.trim_end_matches('/').to_owned();
+		let api_endpoint_base_url = format!("{}{}", api_base_url, api_version.prefix());
+
 		Self {
 			client: reqwestClient::new(),
-			api_base_url: api_base_url.to_owned(),
+			api_base_url,
 			api_key: api_key.to_owned(),
+			api_version,
+			api_endpoint_base_url,
 		}
+	}
+
+	pub const fn api_version(&self) -> ApiVersion {
+		self.api_version
+	}
+
+	pub fn api_base_url(&self) -> &str {
+		&self.api_base_url
 	}
 
 	pub(crate) fn with_auth(
@@ -111,5 +131,19 @@ impl Sdk {
 				Err(eyre::eyre!("Request failed: {}", err))
 			},
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn sdk_builds_a_versioned_endpoint_base_from_an_unversioned_service_root() {
+		let sdk = Sdk::new("http://localhost:1234/", "test-key");
+
+		assert_eq!(sdk.api_base_url(), "http://localhost:1234");
+		assert_eq!(sdk.api_endpoint_base_url, "http://localhost:1234/v1");
+		assert_eq!(sdk.api_version(), ApiVersion::V1);
 	}
 }

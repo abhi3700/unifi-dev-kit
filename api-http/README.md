@@ -66,7 +66,7 @@ After selecting the environment, you can directly reference the variables inside
 Example:
 
 ```http
-GET {{base_url}}/health
+GET {{base_url}}/v1/health
 Authorization: Bearer {{api_key}}
 ```
 

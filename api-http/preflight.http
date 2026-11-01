@@ -14,22 +14,22 @@
 
 ### Managed-wallet net balance
 # @name FetchPreOcpNetBalance
-GET {{HOST}}/payment/onchain/net_balance/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+GET {{HOST}}/v1/payment/onchain/net_balance/{{USER_ID}}/{{CHAIN}}/{{COIN}}
 {{AUTH_HEADER}}
 
 ### Managed-wallet estimated fee
 # @name FetchPreOcpTotalEstimateFee
-GET {{HOST}}/payment/onchain/est_fee/{{USER_ID}}/{{CHAIN}}/{{COIN}}
+GET {{HOST}}/v1/payment/onchain/est_fee/{{USER_ID}}/{{CHAIN}}/{{COIN}}
 {{AUTH_HEADER}}
 
 ### Managed-wallet balance and estimated fee
 # @name FetchPreOcpBalanceAndEstimateFee
-GET {{HOST}}/payment/onchain/balance_est_fee/{{USER_ID}}/{{CHAIN}}/{{COIN}}?fetch_contacts=false
+GET {{HOST}}/v1/payment/onchain/balance_est_fee/{{USER_ID}}/{{CHAIN}}/{{COIN}}?fetch_contacts=false
 {{AUTH_HEADER}}
 
 ### Self-custodial balance, allowance, and estimated fee
 # @name FetchPreOcpBalanceAndEstimateFeeNcw
-POST {{HOST}}/payment/onchain/balance_est_fee_ncw/{{USER_ID}}/{{IS_FEE_INCL}}
+POST {{HOST}}/v1/payment/onchain/balance_est_fee_ncw/{{USER_ID}}/{{IS_FEE_INCL}}
 {{AUTH_HEADER}}
 {{CONTENT_TYPE}}
 
@@ -43,7 +43,7 @@ POST {{HOST}}/payment/onchain/balance_est_fee_ncw/{{USER_ID}}/{{IS_FEE_INCL}}
 
 ### Self-custodial bulk balances, allowances, and estimated fee
 # @name FetchPreOcpBalanceAndEstimateFeeNcwBulkPay
-POST {{HOST}}/payment/onchain/balance_est_fee_ncw_bulkpay/{{USER_ID}}/{{IS_FEE_INCL}}
+POST {{HOST}}/v1/payment/onchain/balance_est_fee_ncw_bulkpay/{{USER_ID}}/{{IS_FEE_INCL}}
 {{AUTH_HEADER}}
 {{CONTENT_TYPE}}
 
@@ -61,5 +61,5 @@ POST {{HOST}}/payment/onchain/balance_est_fee_ncw_bulkpay/{{USER_ID}}/{{IS_FEE_I
 
 ### Raw inputs for client-side self-custodial fee calculation
 # @name PreFetchNcwBalanceFeeParams
-GET {{HOST}}/payment/onchain/ncw/pre_fetch_balance_est_fee_params/{{USER_ID}}/{{CHAIN}}/{{COIN}}?fetch_contacts=false
+GET {{HOST}}/v1/payment/onchain/ncw/pre_fetch_balance_est_fee_params/{{USER_ID}}/{{CHAIN}}/{{COIN}}?fetch_contacts=false
 {{AUTH_HEADER}}

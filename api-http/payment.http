@@ -19,7 +19,7 @@
 
 ### Managed-wallet payment
 # @name PayOnchain
-POST {{HOST}}/payment/onchain/{{USER_ID}}/{{IS_FEE_INCL}}
+POST {{HOST}}/v1/payment/onchain/{{USER_ID}}/{{IS_FEE_INCL}}
 {{AUTH_HEADER}}
 {{CONTENT_TYPE}}
 
@@ -36,7 +36,7 @@ POST {{HOST}}/payment/onchain/{{USER_ID}}/{{IS_FEE_INCL}}
 
 ### Managed-wallet merchant payment
 # @name PayOnchainMerchant
-POST {{HOST}}/payment/onchain/merchant/{{USER_ID}}/{{IS_FEE_INCL}}/{{SESSION_ID}}
+POST {{HOST}}/v1/payment/onchain/merchant/{{USER_ID}}/{{IS_FEE_INCL}}/{{SESSION_ID}}
 {{AUTH_HEADER}}
 {{CONTENT_TYPE}}
 
@@ -50,7 +50,7 @@ POST {{HOST}}/payment/onchain/merchant/{{USER_ID}}/{{IS_FEE_INCL}}/{{SESSION_ID}
 
 ### Create a Permit2 message for one self-custodial payment
 # @name CreateDomainPermitForSignature
-POST {{HOST}}/payment/onchain/ncw/create_domain_permit/{{USER_ID}}
+POST {{HOST}}/v1/payment/onchain/ncw/create_domain_permit/{{USER_ID}}
 {{AUTH_HEADER}}
 {{CONTENT_TYPE}}
 
@@ -65,7 +65,7 @@ POST {{HOST}}/payment/onchain/ncw/create_domain_permit/{{USER_ID}}
 
 ### Create a Permit2 message for a self-custodial bulk payment
 # @name CreateDomainPermitForSignatureBulkPay
-POST {{HOST}}/payment/onchain/ncw/create_domain_permit_bulkpay/{{USER_ID}}
+POST {{HOST}}/v1/payment/onchain/ncw/create_domain_permit_bulkpay/{{USER_ID}}
 {{AUTH_HEADER}}
 {{CONTENT_TYPE}}
 
@@ -91,7 +91,7 @@ POST {{HOST}}/payment/onchain/ncw/create_domain_permit_bulkpay/{{USER_ID}}
 
 ### Submit one signed self-custodial payment
 # @name PayOnchainNcw
-POST {{HOST}}/payment/onchain/ncw/{{USER_ID}}
+POST {{HOST}}/v1/payment/onchain/ncw/{{USER_ID}}
 {{AUTH_HEADER}}
 {{CONTENT_TYPE}}
 
@@ -114,7 +114,7 @@ POST {{HOST}}/payment/onchain/ncw/{{USER_ID}}
 
 ### Submit signed self-custodial bulk payments
 # @name BulkPayNcw
-POST {{HOST}}/payment/onchain/ncw_bulkpay/{{USER_ID}}
+POST {{HOST}}/v1/payment/onchain/ncw_bulkpay/{{USER_ID}}
 {{AUTH_HEADER}}
 {{CONTENT_TYPE}}
 
@@ -147,7 +147,7 @@ POST {{HOST}}/payment/onchain/ncw_bulkpay/{{USER_ID}}
 
 ### Submit a signed self-custodial merchant payment
 # @name PayOnchainMerchantNcw
-POST {{HOST}}/payment/onchain/ncw/merchant/{{USER_ID}}/{{SESSION_ID}}
+POST {{HOST}}/v1/payment/onchain/ncw/merchant/{{USER_ID}}/{{SESSION_ID}}
 {{AUTH_HEADER}}
 {{CONTENT_TYPE}}
 
