@@ -374,6 +374,16 @@ impl AsRef<str> for StableCoin {
 	}
 }
 
+impl StableCoin {
+	/// Return stablecoins in canonical order with duplicates removed.
+	pub fn dedup(coins: impl IntoIterator<Item = Self>) -> Vec<Self> {
+		let mut coins = coins.into_iter().collect::<Vec<_>>();
+		coins.sort_unstable();
+		coins.dedup();
+		coins
+	}
+}
+
 /// Used because of use in dioxus route params.
 impl FromStr for StableCoin {
 	type Err = String;
@@ -1053,6 +1063,12 @@ pub struct PreOcpPayload {
 	pub chain: ChainName,
 }
 
+/// Selected stablecoins for a bulk-payment prefetch on the chain carried by the route.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct BulkPreOcpRequest {
+	pub coins: Vec<StableCoin>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValues {
 	pub is_coin_allowance_zero: bool,
@@ -1065,6 +1081,34 @@ pub struct PreOcpValues {
 	pub contacts_total: u64,
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub contacts_next_cursor: Option<String>,
+}
+
+/// Live custodial payment inputs for multiple coins on one chain.
+/// Balances exclude pending payment reservations. Calculate one batch fee locally from
+/// these inputs; custodial approval targets BundlePay and does not use Permit2.
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+pub struct PreOcpValuesBulk {
+	pub coin_entries: Vec<PreOcpValuesBulkCoin>,
+	/// Live gas price in wei.
+	pub gas_price: u128,
+	/// USD price of the chain's native gas token.
+	pub gas_token_price: f64,
+	#[serde(default)]
+	pub contacts: Vec<Contact>,
+	#[serde(default)]
+	pub contacts_total: u64,
+	#[serde(default)]
+	pub contacts_next_cursor: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct PreOcpValuesBulkCoin {
+	pub coin: StableCoin,
+	pub balance: String,
+	/// Raw ERC20 allowance to BundlePay, in base units.
+	pub allowance: String,
+	/// USD price used when this coin pays the batch fee.
+	pub coin_price: f64,
 }
 
 /// Pre-OCP Values using NCW Params (for calc) for single pay.
@@ -1360,6 +1404,13 @@ pub struct PreOcpValuesNcwParamsBulk {
 	/// ### Usage
 	/// - required in compute est. fee (in stablecoin).
 	pub gas_token_price: f64,
+	/// Recipient contacts, bundled only when requested by an editor.
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub contacts: Vec<Contact>,
+	#[serde(default)]
+	pub contacts_total: u64,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub contacts_next_cursor: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
@@ -1378,6 +1429,64 @@ pub struct PreOcpValuesNcwParamsBulkCoin {
 	/// ### Usage
 	/// - required in compute est. fee (in stablecoin).
 	pub coin_price: f64,
+}
+
+#[cfg(test)]
+mod payment_prefetch_contract_tests {
+	use super::*;
+	use serde_json::json;
+
+	#[test]
+	fn ncw_bulk_prefetch_preserves_raw_inputs_and_defaults_optional_contacts() {
+		let values: PreOcpValuesNcwParamsBulk = serde_json::from_value(json!({
+			"coin_entries": [{ "coin": "USDT", "balance": "10.000000", "allowance": "12345678901234567890", "coin_price": 1.0 }],
+			"gas_price": 100, "gas_token_price": 3000.0
+		})).unwrap();
+		assert_eq!(values.coin_entries[0].allowance, "12345678901234567890");
+		assert!(values.contacts.is_empty());
+		assert_eq!(values.contacts_total, 0);
+		assert!(values.contacts_next_cursor.is_none());
+		let output = serde_json::to_value(values).unwrap();
+		assert!(output["coin_entries"][0].get("est_fee").is_none());
+	}
+
+	#[test]
+	fn cw_bulk_prefetch_returns_raw_fee_inputs_without_per_coin_fees() {
+		let values: PreOcpValuesBulk = serde_json::from_value(json!({
+			"coin_entries": [{ "coin": "DAI", "balance": "10.5", "allowance": "0", "coin_price": 1.0 }],
+			"gas_price": 100, "gas_token_price": 3000.0
+		}))
+		.unwrap();
+		assert_eq!(values.coin_entries[0].coin_price, 1.0);
+		assert_eq!(values.gas_price, 100);
+		assert_eq!(values.coin_entries[0].allowance, "0");
+		assert!(values.contacts.is_empty());
+		let output = serde_json::to_value(values).unwrap();
+		assert_eq!(output["gas_token_price"], 3000.0);
+		assert!(output["coin_entries"][0].get("est_fee").is_none());
+		assert!(output.get("permit2").is_none());
+	}
+
+	#[test]
+	fn bulk_prefetch_request_preserves_the_selected_coins() {
+		let request: BulkPreOcpRequest =
+			serde_json::from_value(json!({ "coins": ["USDT", "USDC"] })).unwrap();
+
+		assert_eq!(request.coins, vec![StableCoin::USDT, StableCoin::USDC]);
+	}
+
+	#[test]
+	fn stablecoin_dedup_removes_non_adjacent_duplicates_in_canonical_order() {
+		let coins = StableCoin::dedup([
+			StableCoin::USDC,
+			StableCoin::USDT,
+			StableCoin::DAI,
+			StableCoin::USDC,
+			StableCoin::USDT,
+		]);
+
+		assert_eq!(coins, vec![StableCoin::USDT, StableCoin::USDC, StableCoin::DAI]);
+	}
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]

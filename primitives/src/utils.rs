@@ -1,9 +1,9 @@
 use crate::{
 	errors::UfiError,
 	types::{
-		ChainName, GasEstimate, PreOcpPayload, PreOcpValuesNcwAllowance, PreOcpValuesNcwBulk,
-		PreOcpValuesNcwParams, PreOcpValuesNcwParamsBulk, PreOcpValuesNcwParamsBulkCoin,
-		PreOcpValuesNcwSingleCoin, StableCoin,
+		ChainName, GasEstimate, PreOcpPayload, PreOcpValuesBulk, PreOcpValuesNcwAllowance,
+		PreOcpValuesNcwBulk, PreOcpValuesNcwParams, PreOcpValuesNcwParamsBulk,
+		PreOcpValuesNcwParamsBulkCoin, PreOcpValuesNcwSingleCoin, StableCoin,
 	},
 };
 use alloy_primitives::{
@@ -111,7 +111,7 @@ fn resolve_ncw_gas_usage_and_allowance(
 	if is_suff {
 		(permit_transfer_gas + extra, U256::ZERO)
 	} else {
-		(approve + permit_transfer_gas + extra, target_amt - allowance)
+		(approve + permit_transfer_gas + extra, target_amt.saturating_sub(allowance))
 	}
 }
 
@@ -259,7 +259,251 @@ fn get_required_allowance(allowance: U256, target_amt: U256) -> U256 {
 	if is_suff { U256::ZERO } else { target_amt - allowance }
 }
 
-const PLATFORM_PAYMENT_FEE_MULTIPLIER: f64 = 1.15;
+const PLATFORM_PAYMENT_FEE_BPS: u128 = 11_500;
+const PLATFORM_PAYMENT_FEE_MULTIPLIER: f64 = PLATFORM_PAYMENT_FEE_BPS as f64 / 10_000.0;
+
+/// Strict, checked parsing for payment drafts. Never truncate fractional digits or
+/// accept malformed fractional text while deciding whether a payment is affordable.
+pub fn parse_payment_amount(value: &str, coin: StableCoin) -> eyre::Result<U256> {
+	let value = value.trim();
+	ensure!(!value.is_empty(), "Invalid amount");
+	let mut parts = value.split('.');
+	let whole = parts.next().unwrap_or_default();
+	let fractional = parts.next().unwrap_or_default();
+	ensure!(
+		parts.next().is_none() &&
+			(!whole.is_empty() || !fractional.is_empty()) &&
+			whole.bytes().all(|b| b.is_ascii_digit()) &&
+			fractional.bytes().all(|b| b.is_ascii_digit()),
+		"Invalid amount"
+	);
+	let decimals = coin.decimals();
+	ensure!(fractional.len() <= decimals as usize, UfiError::MaxDecimalsReached(decimals));
+	let scale = U256::from(10).pow(U256::from(decimals));
+	let whole = if whole.is_empty() { U256::ZERO } else { U256::from_str(whole)? };
+	let whole = whole.checked_mul(scale).ok_or_eyre("Amount is too large")?;
+	let fraction = if fractional.is_empty() {
+		U256::ZERO
+	} else {
+		U256::from_str(fractional)?
+			.checked_mul(U256::from(10).pow(U256::from(decimals as usize - fractional.len())))
+			.ok_or_eyre("Amount is too large")?
+	};
+	whole.checked_add(fraction).ok_or_eyre("Amount is too large")
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PaymentCoinQuote {
+	pub coin: StableCoin,
+	pub amount: String,
+	pub balance: String,
+	pub est_fee: String,
+	pub shortfall: Option<String>,
+	/// Positions in the original recipient list whose positive amounts exceed this coin's
+	/// balance when allocated from top to bottom, after reserving its batch fee.
+	pub insufficient_recipients: Vec<usize>,
+}
+
+/// The wallet-specific prefetch responses used to validate a payment draft.
+pub enum PaymentBatchParams<'a> {
+	Custodial { chain: ChainName, params: &'a PreOcpValuesBulk },
+	NonCustodial { chain: ChainName, params: &'a PreOcpValuesNcwParamsBulk },
+}
+
+/// Aggregate selected coins and validate totals plus fees against live balances.
+/// Both wallet modes charge one batch estimate in the last item's coin.
+pub fn payment_batch_quote(
+	params: PaymentBatchParams<'_>,
+	items: &[(StableCoin, String)],
+) -> eyre::Result<Vec<PaymentCoinQuote>> {
+	let fee_coin = items.last().ok_or_eyre("No recipients")?.0;
+	let mut totals = HashMap::<StableCoin, U256>::new();
+	let mut counts = HashMap::<StableCoin, u32>::new();
+	let mut parsed_items = Vec::with_capacity(items.len());
+	for (coin, amount) in items {
+		let amount = if amount.trim().is_empty() {
+			U256::ZERO
+		} else {
+			parse_payment_amount(amount, *coin)?
+		};
+		let total = totals.entry(*coin).or_default();
+		*total = total.checked_add(amount).ok_or_eyre("Total amount is too large")?;
+		parsed_items.push((*coin, amount));
+		let count = counts.entry(*coin).or_default();
+		*count = count.checked_add(1).ok_or_eyre("Too many recipients")?;
+	}
+	let selected_coins = StableCoin::all().iter().copied().filter(|coin| totals.contains_key(coin));
+	let inputs = match params {
+		PaymentBatchParams::Custodial { chain, params } => {
+			let fee = parse_payment_amount(
+				&compute_est_fee_cw_bulkpay(chain, fee_coin, &counts, params)?,
+				fee_coin,
+			)?;
+			selected_coins
+				.map(|coin| {
+					let entry = params
+						.coin_entries
+						.iter()
+						.find(|entry| entry.coin == coin)
+						.ok_or_eyre(format!("Balance unavailable for {coin}"))?;
+					Ok((
+						coin,
+						entry.balance.as_str(),
+						if coin == fee_coin { fee } else { U256::ZERO },
+					))
+				})
+				.collect::<eyre::Result<Vec<_>>>()?
+		},
+		PaymentBatchParams::NonCustodial { chain, params } => {
+			ensure!(
+				params.gas_token_price.is_finite() && params.gas_token_price > 0.0,
+				"Invalid gas price inputs"
+			);
+			let selected = selected_coins
+				.map(|coin| {
+					let entry = params
+						.coin_entries
+						.iter()
+						.find(|entry| entry.coin == coin)
+						.ok_or_eyre(format!("Balance unavailable for {coin}"))?;
+					ensure!(
+						entry.coin_price.is_finite() && entry.coin_price > 0.0,
+						"Invalid coin price"
+					);
+					Ok(entry)
+				})
+				.collect::<eyre::Result<Vec<_>>>()?;
+			let bulk_fee = compute_est_fee_ncw_bulkpay(
+				chain,
+				fee_coin,
+				totals.clone(),
+				counts,
+				PreOcpValuesNcwParamsBulk {
+					coin_entries: selected.iter().map(|entry| (*entry).clone()).collect(),
+					gas_price: params.gas_price,
+					gas_token_price: params.gas_token_price,
+					..Default::default()
+				},
+				false,
+				true,
+			)?
+			.tot_est_fee;
+			selected
+				.into_iter()
+				.map(|entry| {
+					let fee = if entry.coin == fee_coin {
+						parse_payment_amount(&bulk_fee, entry.coin)?
+					} else {
+						U256::ZERO
+					};
+					Ok((entry.coin, entry.balance.as_str(), fee))
+				})
+				.collect::<eyre::Result<Vec<_>>>()?
+		},
+	};
+	inputs
+		.into_iter()
+		.map(|(coin, balance, fee)| {
+			let amount = totals[&coin];
+			let parsed_balance = parse_payment_amount(balance, coin)?;
+			let required = amount.checked_add(fee).ok_or_eyre("Total plus fee is too large")?;
+			let spendable = parsed_balance.saturating_sub(fee);
+			let mut cumulative = U256::ZERO;
+			let mut insufficient_recipients = Vec::new();
+			for (index, (recipient_coin, recipient_amount)) in parsed_items.iter().enumerate() {
+				if *recipient_coin != coin {
+					continue;
+				}
+				cumulative = cumulative
+					.checked_add(*recipient_amount)
+					.ok_or_eyre("Total amount is too large")?;
+				if !recipient_amount.is_zero() && cumulative > spendable {
+					insufficient_recipients.push(index);
+				}
+			}
+			let shortfall = required
+				.checked_sub(parsed_balance)
+				.filter(|value| !value.is_zero())
+				.map(|value| fmt_output(value, coin.decimals()))
+				.transpose()?;
+			Ok(PaymentCoinQuote {
+				coin,
+				amount: fmt_output(amount, coin.decimals())?,
+				balance: balance.to_owned(),
+				est_fee: fmt_output(fee, coin.decimals())?,
+				shortfall,
+				insufficient_recipients,
+			})
+		})
+		.collect()
+}
+
+/// Calculate one custodial batch estimate from live prefetched metadata.
+/// The custodial execution policy uses MAX BundlePay approvals: a zero allowance adds
+/// funding and approval gas once per selected coin; recipient transfers scale by count.
+/// No Permit2, signing, or extra NCW fee-transfer gas is included.
+pub fn compute_est_fee_cw_bulkpay(
+	chain: ChainName,
+	fee_coin: StableCoin,
+	payments_per_coin: &HashMap<StableCoin, u32>,
+	params: &PreOcpValuesBulk,
+) -> eyre::Result<String> {
+	ensure!(!payments_per_coin.is_empty(), "No recipients");
+	ensure!(payments_per_coin.contains_key(&fee_coin), "Fee coin is not selected");
+	let usd_units = |price: f64| -> eyre::Result<U256> {
+		ensure!(price.is_finite() && price > 0.0, "Invalid coin price");
+		let units = parse_payment_amount(&format!("{price:.18}"), StableCoin::DAI)?;
+		ensure!(!units.is_zero(), "Coin price is below supported precision");
+		Ok(units)
+	};
+	let gas_token_price = usd_units(params.gas_token_price)?;
+	let fee_coin_entry = params
+		.coin_entries
+		.iter()
+		.find(|entry| entry.coin == fee_coin)
+		.ok_or_eyre("Missing fee coin")?;
+	let fee_coin_price = usd_units(fee_coin_entry.coin_price)?;
+	let mut total_gas = 0_u128;
+	for (coin, count) in payments_per_coin {
+		ensure!(*count > 0, "Recipient count must be positive");
+		let entry = params
+			.coin_entries
+			.iter()
+			.find(|entry| entry.coin == *coin)
+			.ok_or_eyre(format!("Balance unavailable for {coin}"))?;
+		let allowance = U256::from_str(&entry.allowance).wrap_err("Invalid BundlePay allowance")?;
+		let GasEstimate { eth_transfer, approve, transfer_from, .. } =
+			chain.get_gas_usage_limit(Some(*coin));
+		let transfer_gas = transfer_from
+			.checked_mul(u128::from(*count))
+			.ok_or_eyre("Transfer gas is too large")?;
+		let approval_gas = if allowance.is_zero() {
+			eth_transfer.checked_add(approve).ok_or_eyre("Approval gas is too large")?
+		} else {
+			0
+		};
+		total_gas = total_gas
+			.checked_add(transfer_gas)
+			.and_then(|gas| gas.checked_add(approval_gas))
+			.ok_or_eyre("Batch gas is too large")?;
+	}
+	let gas_wei = total_gas.checked_mul(params.gas_price).ok_or_eyre("Gas fee is too large")?;
+	// Prices share an 18-decimal USD scale, which cancels in their ratio. Use checked
+	// integer arithmetic and round up once, after aggregating the whole batch.
+	let numerator = U256::from(gas_wei)
+		.checked_mul(gas_token_price)
+		.and_then(|value| value.checked_mul(U256::from(PLATFORM_PAYMENT_FEE_BPS)))
+		.and_then(|value| value.checked_mul(U256::from(10).pow(U256::from(fee_coin.decimals()))))
+		.ok_or_eyre("Batch fee is too large")?;
+	let denominator = fee_coin_price
+		.checked_mul(U256::from(10).pow(U256::from(chain.to_gas_coin().decimals())))
+		.and_then(|value| value.checked_mul(U256::from(10_000)))
+		.ok_or_eyre("Fee price denominator is too large")?;
+	let fee = (numerator / denominator)
+		.checked_add(U256::from(u8::from(!(numerator % denominator).is_zero())))
+		.ok_or_eyre("Batch fee is too large")?;
+	fmt_output(fee, fee_coin.decimals())
+}
 
 /// Compute Est. fee for NC Pay.
 ///
@@ -444,7 +688,9 @@ pub fn compute_est_fee_ncw(
 	// - Further iterations are unnecessary as the system stabilizes quickly.
 	// - For `fee_incl`, this step is skipped because `amount` already represents total spend.
 	if !is_fee_incl {
-		tot_amount += est_fee_u256;
+		tot_amount = tot_amount
+			.checked_add(est_fee_u256)
+			.ok_or_eyre("Amount plus fee is too large")?;
 		if !use_in_ui && tot_amount.gt(&balance) {
 			return Err(UfiError::InsufficientBalance.into())
 		}
@@ -529,11 +775,9 @@ pub fn compute_est_fee_ncw(
 ///     - NOT derived from `batch_len`
 ///
 /// ## Important Note
-/// This implementation assumes that `PreOcpValuesNcwBulk.est_fee` is expressed in the
-/// **default stablecoin unit** (e.g., USDT).
-///
-/// If fee denomination needs to change (e.g., per-coin or gas token), only the final
-/// aggregation/formatting step should be adjusted.
+/// Every transfer's gas cost is converted using the selected fee coin's price and
+/// decimals. The entire estimate is charged once in that coin. If adding the fee
+/// crosses its allowance, the estimate also includes that coin's approval cost.
 ///
 /// ## Design pros
 /// - Handles mixed allowance states across coins
@@ -553,8 +797,12 @@ pub fn compute_est_fee_ncw_bulkpay(
 	is_fee_incl: bool,
 	use_in_ui: bool,
 ) -> eyre::Result<PreOcpValuesNcwBulk> {
-	let PreOcpValuesNcwParamsBulk { coin_entries: params_coin_entries, gas_price, gas_token_price } =
-		params;
+	let PreOcpValuesNcwParamsBulk {
+		coin_entries: params_coin_entries,
+		gas_price,
+		gas_token_price,
+		..
+	} = params;
 
 	ensure!(
 		params_coin_entries.len().le(&StableCoin::all().len()) &&
@@ -562,6 +810,13 @@ pub fn compute_est_fee_ncw_bulkpay(
 		"Params coin entries & tot amount per coin can't exceed coins max. length"
 	);
 
+	let fee_coin_price = params_coin_entries
+		.iter()
+		.find(|entry| entry.coin == fee_coin)
+		.ok_or_eyre("Missing fee coin")?
+		.coin_price;
+	ensure!(fee_coin_price.is_finite() && fee_coin_price > 0.0, "Invalid fee coin price");
+	let fee_coin_decimals = fee_coin.decimals();
 	let max_decimals = params_coin_entries
 		.iter()
 		.map(|entry| entry.coin.decimals())
@@ -577,7 +832,7 @@ pub fn compute_est_fee_ncw_bulkpay(
 	let mut fee_coin_totamount = U256::ZERO;
 
 	for entry in params_coin_entries.iter() {
-		let PreOcpValuesNcwParamsBulkCoin { coin, allowance, balance, coin_price } = entry;
+		let PreOcpValuesNcwParamsBulkCoin { coin, allowance, balance, .. } = entry;
 		let coin = *coin;
 		let coin_decimals = coin.decimals();
 
@@ -598,7 +853,8 @@ pub fn compute_est_fee_ncw_bulkpay(
 
 		// fee = (gas_usage * gas_price * gas_token_price * platform_multiplier)
 		//       / (coin_price * 10^(gas_coin_decimals))
-		let price_denom = coin_price * 10f64.powi(gas_coin_decimals);
+		// All gas costs are paid in the fee coin, including transfers of other coins.
+		let price_denom = fee_coin_price * 10f64.powi(gas_coin_decimals);
 
 		let payment_count = payments_per_coin
 			.get(&coin)
@@ -631,14 +887,14 @@ pub fn compute_est_fee_ncw_bulkpay(
 			gas_token_price,
 			PLATFORM_PAYMENT_FEE_MULTIPLIER,
 			price_denom,
-			coin_decimals,
+			fee_coin_decimals,
 		)?;
 
 		// est_fee directly not added as there could be mixed decimals related issue. So, we
 		// normalize by scaling to 10^remaining (e.g. 18-6 = 12), if required.
 		let normalized_est_fee_u256 = normalize_est_fee_u256(
 			est_fee_u256,
-			coin_decimals,
+			fee_coin_decimals,
 			max_decimals,
 			"bulk-pay estimated fee",
 		)?;
@@ -660,15 +916,45 @@ pub fn compute_est_fee_ncw_bulkpay(
 		);
 	}
 
-	let fee_coin_decimals = fee_coin.decimals();
-
 	// Same reasoning as single-pay, but only do this for `fee_coin == coin`.
 	// for fee-excl, total spend becomes (fee_coin_totamount + tot_est_fee), which can change
 	// allowance sufficiency, so recompute using the updated spend i.e. `fee_coin_totamount`.
 	if !is_fee_incl {
 		// denormalize total_est_fee_u256 before adding.
-		let x = denormalize_est_fee_u256(total_est_fee_u256, max_decimals, fee_coin_decimals)?;
-		fee_coin_totamount += x;
+		let mut fee =
+			denormalize_est_fee_u256(total_est_fee_u256, max_decimals, fee_coin_decimals)?;
+		let initial_amount = fee_coin_totamount;
+		fee_coin_totamount =
+			initial_amount.checked_add(fee).ok_or_eyre("Amount plus fee is too large")?;
+		// Adding the batch fee can cross an otherwise sufficient allowance. Include
+		// the newly required approval cost before checking spendable balance.
+		if !initial_amount.is_zero() &&
+			!fee_coin_allowance.is_zero() &&
+			fee_coin_allowance >= initial_amount &&
+			fee_coin_allowance < fee_coin_totamount
+		{
+			let (extra_fee, _) = calc_ncw_est_fee_snapshot(
+				U256::ZERO,
+				U256::from(1),
+				chain.get_gas_usage_limit(None).approve,
+				0,
+				false,
+				gas_price,
+				gas_token_price,
+				PLATFORM_PAYMENT_FEE_MULTIPLIER,
+				fee_coin_price * 10f64.powi(gas_coin_decimals),
+				fee_coin_decimals,
+			)?;
+			fee = fee.checked_add(extra_fee).ok_or_eyre("Fee is too large")?;
+			total_est_fee_u256 = normalize_est_fee_u256(
+				fee,
+				fee_coin_decimals,
+				max_decimals,
+				"bulk fee with approval",
+			)?;
+			fee_coin_totamount =
+				initial_amount.checked_add(fee).ok_or_eyre("Amount plus fee is too large")?;
+		}
 
 		if !use_in_ui && fee_coin_totamount.gt(&fee_coin_balance) {
 			return Err(UfiError::InsufficientBalance.into())
@@ -853,7 +1139,11 @@ pub fn sanitize_and_parse_amount(
 	coin: StableCoin,
 	use_in_ui: bool,
 ) -> eyre::Result<U256> {
-	let amount_u256 = parse_human_fmt_to_u256(amount, coin.decimals(), use_in_ui)?;
+	let amount_u256 = if use_in_ui {
+		parse_payment_amount(amount, coin)?
+	} else {
+		parse_human_fmt_to_u256(amount, coin.decimals(), false)?
+	};
 	ensure!(!amount_u256.is_zero(), UfiError::ZeroAmount);
 	Ok(amount_u256)
 }
@@ -1004,6 +1294,414 @@ pub fn generate_unique_id(user_id: &str, timestamp_as_micros: i64) -> String {
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	fn ncw_batch_quote(
+		params: &PreOcpValuesNcwParamsBulk,
+		items: &[(StableCoin, String)],
+	) -> eyre::Result<Vec<PaymentCoinQuote>> {
+		payment_batch_quote(
+			PaymentBatchParams::NonCustodial { chain: ChainName::Sepolia, params },
+			items,
+		)
+	}
+
+	fn custodial_prefetch_fixture() -> PreOcpValuesBulk {
+		PreOcpValuesBulk {
+			gas_price: 1_000_000_000,
+			gas_token_price: 3000.0,
+			coin_entries: StableCoin::all()
+				.iter()
+				.map(|coin| crate::types::PreOcpValuesBulkCoin {
+					coin: *coin,
+					balance: "100".into(),
+					allowance: U256::MAX.to_string(),
+					coin_price: 1.0,
+				})
+				.collect(),
+			..Default::default()
+		}
+	}
+
+	fn custodial_batch_quote(
+		params: &PreOcpValuesBulk,
+		items: &[(StableCoin, String)],
+	) -> eyre::Result<Vec<PaymentCoinQuote>> {
+		payment_batch_quote(
+			PaymentBatchParams::Custodial { chain: ChainName::Sepolia, params },
+			items,
+		)
+	}
+
+	fn ncw_prefetch_fixture() -> PreOcpValuesNcwParamsBulk {
+		PreOcpValuesNcwParamsBulk {
+			gas_price: 1_000_000_000,
+			gas_token_price: 3000.0,
+			coin_entries: StableCoin::all()
+				.iter()
+				.map(|coin| crate::types::PreOcpValuesNcwParamsBulkCoin {
+					coin: *coin,
+					balance: "100".into(),
+					allowance: U256::MAX.to_string(),
+					coin_price: 1.0,
+				})
+				.collect(),
+			..Default::default()
+		}
+	}
+
+	#[test]
+	fn payment_batch_empty_drafts_estimate_fees_without_allowance_underflow() {
+		let rows = ncw_batch_quote(
+			&ncw_prefetch_fixture(),
+			&[(StableCoin::USDT, String::new()), (StableCoin::USDC, String::new())],
+		)
+		.unwrap();
+		assert_eq!(rows.len(), 2);
+		assert!(rows.iter().all(|row| row.shortfall.is_none()));
+	}
+
+	#[test]
+	fn payment_batch_uses_fee_coin_price_for_every_transfer() {
+		let mut portfolio = ncw_prefetch_fixture();
+		let items = [(StableCoin::USDT, "1".into()), (StableCoin::DAI, "1".into())];
+		let before = ncw_batch_quote(&portfolio, &items).unwrap();
+		portfolio
+			.coin_entries
+			.iter_mut()
+			.find(|entry| entry.coin == StableCoin::USDT)
+			.unwrap()
+			.coin_price = 0.5;
+		let after = ncw_batch_quote(&portfolio, &items).unwrap();
+		assert_eq!(before, after, "A non-fee coin's price cannot change fees charged in DAI");
+	}
+
+	#[test]
+	fn payment_batch_fee_crossing_allowance_includes_approval_cost() {
+		let mut portfolio = ncw_prefetch_fixture();
+		let items = [(StableCoin::USDT, "10".into())];
+		let without_approval = ncw_batch_quote(&portfolio, &items).unwrap().remove(0);
+		portfolio
+			.coin_entries
+			.iter_mut()
+			.find(|entry| entry.coin == StableCoin::USDT)
+			.unwrap()
+			.allowance = "10000000".into();
+		let with_approval = ncw_batch_quote(&portfolio, &items).unwrap().remove(0);
+		assert!(
+			parse_payment_amount(&with_approval.est_fee, StableCoin::USDT).unwrap() >
+				parse_payment_amount(&without_approval.est_fee, StableCoin::USDT).unwrap()
+		);
+	}
+
+	#[test]
+	fn payment_batch_same_coin_aggregates_before_balance_check() {
+		let rows = ncw_batch_quote(
+			&ncw_prefetch_fixture(),
+			&[(StableCoin::USDT, "60".into()), (StableCoin::USDT, "50".into())],
+		)
+		.unwrap();
+		assert_eq!(rows.len(), 1);
+		assert_eq!(
+			parse_payment_amount(&rows[0].amount, StableCoin::USDT).unwrap(),
+			U256::from(110_000_000)
+		);
+		assert!(rows[0].shortfall.is_some());
+	}
+
+	#[test]
+	fn payment_batch_mixed_coins_only_charge_last_coin_for_ncw_fee() {
+		let rows = ncw_batch_quote(
+			&ncw_prefetch_fixture(),
+			&[(StableCoin::USDT, "100".into()), (StableCoin::DAI, "100".into())],
+		)
+		.unwrap();
+		let usdt = rows.iter().find(|row| row.coin == StableCoin::USDT).unwrap();
+		let dai = rows.iter().find(|row| row.coin == StableCoin::DAI).unwrap();
+		assert!(usdt.shortfall.is_none());
+		assert!(parse_payment_amount(&usdt.est_fee, usdt.coin).unwrap().is_zero());
+		assert!(dai.shortfall.is_some());
+		assert!(parse_payment_amount(&dai.est_fee, dai.coin).unwrap() > U256::ZERO);
+	}
+
+	#[test]
+	fn payment_batch_marks_unfunded_amounts_from_top_to_bottom_per_coin() {
+		let mut params = custodial_prefetch_fixture();
+		for entry in &mut params.coin_entries {
+			entry.balance = if entry.coin == StableCoin::USDT { "260.155420" } else { "0" }.into();
+		}
+		let rows = custodial_batch_quote(
+			&params,
+			&[
+				(StableCoin::USDT, "200".into()),
+				(StableCoin::USDC, "100".into()),
+				(StableCoin::USDC, "1.888888".into()),
+				(StableCoin::DAI, "0".into()),
+				(StableCoin::USDC, "0".into()),
+				(StableCoin::USDC, String::new()),
+			],
+		)
+		.unwrap();
+		let usdc = rows.iter().find(|row| row.coin == StableCoin::USDC).unwrap();
+		assert_eq!(usdc.insufficient_recipients, vec![1, 2]);
+		assert!(
+			rows.iter()
+				.filter(|row| row.coin != StableCoin::USDC)
+				.all(|row| row.insufficient_recipients.is_empty())
+		);
+	}
+
+	#[test]
+	fn payment_batch_reserves_fee_before_assigning_available_balance() {
+		let mut params = custodial_prefetch_fixture();
+		let items = [(StableCoin::USDT, "50".into()), (StableCoin::USDT, "50".into())];
+		params.coin_entries[0].balance = "100.552000".into();
+		let exact = custodial_batch_quote(&params, &items).unwrap();
+		assert!(exact[0].insufficient_recipients.is_empty());
+		params.coin_entries[0].balance = "100.551999".into();
+		let short = custodial_batch_quote(&params, &items).unwrap();
+		assert_eq!(short[0].insufficient_recipients, vec![1]);
+		assert!(short[0].shortfall.is_some());
+	}
+
+	#[test]
+	fn payment_batch_only_marks_later_unfunded_ncw_amounts_and_clears_after_edit() {
+		let params = ncw_prefetch_fixture();
+		let mut items = [
+			(StableCoin::USDT, "60".into()),
+			(StableCoin::DAI, "1".into()),
+			(StableCoin::USDT, "50".into()),
+			(StableCoin::USDT, "1".into()),
+		];
+		let short = ncw_batch_quote(&params, &items).unwrap();
+		let usdt = short.iter().find(|row| row.coin == StableCoin::USDT).unwrap();
+		assert_eq!(usdt.insufficient_recipients, vec![2, 3]);
+		items[2].1 = "10".into();
+		let fixed = ncw_batch_quote(&params, &items).unwrap();
+		assert!(fixed.iter().all(|row| row.insufficient_recipients.is_empty()));
+		assert!(fixed.iter().all(|row| row.shortfall.is_none()));
+	}
+
+	#[test]
+	fn payment_batch_custodial_recalculates_one_fee_with_recipient_count() {
+		let mut portfolio = custodial_prefetch_fixture();
+		portfolio.coin_entries[0].balance = "100.552000".into();
+		let coin = portfolio.coin_entries[0].coin;
+		let items = [(coin, "50".into()), (coin, "50".into())];
+		let row = custodial_batch_quote(&portfolio, &items).unwrap().remove(0);
+		assert!(row.shortfall.is_none());
+		assert_eq!(
+			parse_payment_amount(&row.est_fee, coin).unwrap(),
+			parse_payment_amount("0.552", coin).unwrap()
+		);
+		let single = custodial_batch_quote(&portfolio, &items[..1]).unwrap();
+		assert_eq!(single[0].est_fee, "0.276000");
+		portfolio.coin_entries[0].balance = "100.551999".into();
+		assert!(custodial_batch_quote(&portfolio, &items).unwrap()[0].shortfall.is_some());
+	}
+
+	#[test]
+	fn payment_batch_custodial_mixed_coins_check_balances_and_fees_independently() {
+		let mut params = custodial_prefetch_fixture();
+		params
+			.coin_entries
+			.iter_mut()
+			.find(|entry| entry.coin == StableCoin::USDC)
+			.unwrap()
+			.balance = "1".into();
+		let items = [(StableCoin::USDT, "20".into()), (StableCoin::USDC, "1".into())];
+		let rows = custodial_batch_quote(&params, &items).unwrap();
+		assert!(
+			rows.iter()
+				.find(|row| row.coin == StableCoin::USDT)
+				.unwrap()
+				.shortfall
+				.is_none()
+		);
+		assert!(
+			rows.iter()
+				.find(|row| row.coin == StableCoin::USDC)
+				.unwrap()
+				.shortfall
+				.is_some()
+		);
+		params.coin_entries.retain(|entry| entry.coin != StableCoin::USDC);
+		assert!(custodial_batch_quote(&params, &items).is_err());
+	}
+
+	#[test]
+	fn custodial_batch_approval_cost_is_added_once_per_coin() {
+		let mut params = custodial_prefetch_fixture();
+		params.coin_entries[0].allowance = "0".into();
+		let coin = params.coin_entries[0].coin;
+		let single = custodial_batch_quote(&params, &[(coin, "1".into())]).unwrap();
+		let double =
+			custodial_batch_quote(&params, &[(coin, "1".into()), (coin, "1".into())]).unwrap();
+		assert_eq!(single[0].est_fee, "0.693450");
+		assert_eq!(double[0].est_fee, "0.969450");
+	}
+
+	#[test]
+	fn custodial_batch_charges_only_fee_coin_and_uses_its_price() {
+		let mut params = custodial_prefetch_fixture();
+		let items = [(StableCoin::USDT, "10".into()), (StableCoin::DAI, "10".into())];
+		let before = custodial_batch_quote(&params, &items).unwrap();
+		params
+			.coin_entries
+			.iter_mut()
+			.find(|entry| entry.coin == StableCoin::USDT)
+			.unwrap()
+			.coin_price = 0.5;
+		let after = custodial_batch_quote(&params, &items).unwrap();
+		assert_eq!(before, after);
+		let usdt = after.iter().find(|row| row.coin == StableCoin::USDT).unwrap();
+		let dai = after.iter().find(|row| row.coin == StableCoin::DAI).unwrap();
+		assert!(parse_payment_amount(&usdt.est_fee, usdt.coin).unwrap().is_zero());
+		assert_eq!(
+			parse_payment_amount(&dai.est_fee, dai.coin).unwrap(),
+			parse_payment_amount("0.552", dai.coin).unwrap()
+		);
+		assert!(after.iter().all(|row| row.shortfall.is_none()));
+	}
+
+	#[test]
+	fn custodial_batch_recalculates_selected_approvals_and_fee_coin_price() {
+		let mut params = custodial_prefetch_fixture();
+		for entry in &mut params.coin_entries {
+			entry.allowance = "0".into();
+		}
+		let items = [(StableCoin::USDT, "1".into()), (StableCoin::USDC, "1".into())];
+		let both = custodial_batch_quote(&params, &items).unwrap();
+		let fee = both.iter().find(|row| row.coin == StableCoin::USDC).unwrap();
+		assert_eq!(fee.est_fee, "1.386900");
+		// Removing a coin also removes its approval cost. Unused DAI is never approved.
+		let remaining = custodial_batch_quote(&params, &items[1..]).unwrap();
+		assert_eq!(remaining[0].est_fee, "0.693450");
+		params
+			.coin_entries
+			.iter_mut()
+			.find(|entry| entry.coin == StableCoin::USDC)
+			.unwrap()
+			.coin_price = 0.5;
+		let repriced = custodial_batch_quote(&params, &items[1..]).unwrap();
+		assert_eq!(repriced[0].est_fee, "1.386900");
+	}
+
+	#[test]
+	fn custodial_batch_rounds_up_once_after_summing_gas() {
+		let mut params = custodial_prefetch_fixture();
+		params.gas_price = 1;
+		let rows = custodial_batch_quote(
+			&params,
+			&[(StableCoin::USDT, "1".into()), (StableCoin::USDT, "1".into())],
+		)
+		.unwrap();
+		assert_eq!(rows[0].est_fee, "0.000001");
+	}
+
+	#[test]
+	fn custodial_batch_rejects_invalid_metadata_and_gas_overflow() {
+		let items = [(StableCoin::USDT, "1".into())];
+		let mut params = custodial_prefetch_fixture();
+		params.gas_token_price = f64::NAN;
+		assert!(custodial_batch_quote(&params, &items).is_err());
+		params.gas_token_price = 3000.0;
+		params.coin_entries[0].coin_price = 0.0;
+		assert!(custodial_batch_quote(&params, &items).is_err());
+		params.coin_entries[0].coin_price = 1.0;
+		params.coin_entries[0].allowance = "invalid".into();
+		assert!(custodial_batch_quote(&params, &items).is_err());
+		params.coin_entries[0].allowance = U256::MAX.to_string();
+		params.gas_price = u128::MAX;
+		assert!(custodial_batch_quote(&params, &items).is_err());
+	}
+
+	#[test]
+	fn payment_batch_ignores_unused_coins_and_rejects_missing_data() {
+		let mut portfolio = ncw_prefetch_fixture();
+		let items = [(StableCoin::USDC, "1".into())];
+		assert_eq!(ncw_batch_quote(&portfolio, &items).unwrap().len(), 1);
+		portfolio.coin_entries.retain(|entry| entry.coin != StableCoin::USDC);
+		assert!(ncw_batch_quote(&portfolio, &items).is_err());
+	}
+
+	#[test]
+	fn payment_batch_rejects_malformed_precision_and_overflow() {
+		for amount in [
+			"1.2.3",
+			"1.abc",
+			"-1",
+			"NaN",
+			"1e5",
+			"1.0000001",
+			"9999999999999999999999999999999999999999999999999999999999999999999999999999999",
+		] {
+			assert!(
+				ncw_batch_quote(&ncw_prefetch_fixture(), &[(StableCoin::USDT, amount.into())])
+					.is_err(),
+				"{amount}"
+			);
+		}
+		assert_eq!(
+			parse_payment_amount("1.000000000000000001", StableCoin::DAI).unwrap(),
+			U256::from(1_000_000_000_000_000_001_u128)
+		);
+	}
+
+	#[test]
+	fn ui_amount_validation_preserves_each_coins_decimal_error() {
+		for coin in StableCoin::all() {
+			let valid = format!("1.{}", "5".repeat(coin.decimals() as usize));
+			assert!(sanitize_and_parse_amount(&valid, *coin, true).is_ok());
+			let invalid = format!("{valid}5");
+			let error =
+				validate_and_parse_amount(&invalid, *coin, "100", "0", false, true).unwrap_err();
+			assert!(
+				matches!(error.downcast_ref::<UfiError>(), Some(UfiError::MaxDecimalsReached(decimals)) if *decimals == coin.decimals())
+			);
+		}
+	}
+
+	#[test]
+	fn ui_amount_validation_is_checked_and_preserves_zero_and_balance_errors() {
+		let coin = StableCoin::USDT;
+		assert_eq!(sanitize_and_parse_amount(".1", coin, true).unwrap(), U256::from(100_000));
+		for invalid in ["1.abc", "1.2.3", "NaN", "-1", ".", "1e5"] {
+			assert!(sanitize_and_parse_amount(invalid, coin, true).is_err(), "{invalid}");
+		}
+		assert!(sanitize_and_parse_amount(&U256::MAX.to_string(), coin, true).is_err());
+		let zero = validate_and_parse_amount("0", coin, "100", "0", false, true).unwrap_err();
+		assert!(matches!(zero.downcast_ref::<UfiError>(), Some(UfiError::ZeroAmount)));
+		let short = validate_and_parse_amount("100", coin, "100", "1", false, true).unwrap_err();
+		assert!(matches!(short.downcast_ref::<UfiError>(), Some(UfiError::InsufficientBalance)));
+	}
+
+	#[test]
+	fn payment_batch_fee_changes_with_count_and_selected_fee_coin() {
+		let portfolio = ncw_prefetch_fixture();
+		let one = ncw_batch_quote(&portfolio, &[(StableCoin::USDT, "1".into())]).unwrap();
+		let two = ncw_batch_quote(
+			&portfolio,
+			&[(StableCoin::USDT, "1".into()), (StableCoin::USDT, "1".into())],
+		)
+		.unwrap();
+		assert!(
+			parse_payment_amount(&two[0].est_fee, StableCoin::USDT).unwrap() >
+				parse_payment_amount(&one[0].est_fee, StableCoin::USDT).unwrap()
+		);
+		let switched = ncw_batch_quote(
+			&portfolio,
+			&[(StableCoin::DAI, "1".into()), (StableCoin::USDT, "1".into())],
+		)
+		.unwrap();
+		assert!(
+			parse_payment_amount(
+				&switched.iter().find(|q| q.coin == StableCoin::DAI).unwrap().est_fee,
+				StableCoin::DAI
+			)
+			.unwrap()
+			.is_zero()
+		);
+	}
 
 	#[test]
 	fn test_req_allowance() {

@@ -2,15 +2,47 @@ use crate::{Sdk, types::ApiHandler};
 use unifi_sdk_primitives::{
 	permit2::DomainPermitForSig,
 	types::{
-		BulkPayBase, BulkPayItem, BulkPayItemRequest, BulkPayResponse, ChainName, OcPayHistory,
-		OcPayReceipt, PayHistoryFilterParams, PayOnchainNcwBulkRequest, PayOnchainNcwRequest,
-		PayOnchainPayload, PayOnchainPayloadNcw, PayOnchainPayloadNcwBase, PayOnchainRequest,
-		PreOcpPayload, PreOcpValues, PreOcpValuesNcw, PreOcpValuesNcwBulk, PreOcpValuesNcwParams,
-		StableCoin,
+		BulkPayBase, BulkPayItem, BulkPayItemRequest, BulkPayResponse, BulkPreOcpRequest,
+		ChainName, OcPayHistory, OcPayReceipt, PayHistoryFilterParams, PayOnchainNcwBulkRequest,
+		PayOnchainNcwRequest, PayOnchainPayload, PayOnchainPayloadNcw, PayOnchainPayloadNcwBase,
+		PayOnchainRequest, PreOcpPayload, PreOcpValues, PreOcpValuesNcw, PreOcpValuesNcwBulk,
+		PreOcpValuesNcwParams, StableCoin,
 	},
 };
 
 impl Sdk {
+	/// Fetch selected custodial balances, BundlePay allowances, and raw batch-fee inputs.
+	pub async fn fetch_pre_ocp_balance_and_est_fee_bulkpay(
+		&self,
+		user_id: &str,
+		chain: ChainName,
+		coins: &[StableCoin],
+		fetch_contacts: bool,
+	) -> eyre::Result<unifi_sdk_primitives::types::PreOcpValuesBulk> {
+		let handler = ApiHandler::FetchPreOcpBalanceAndEstFeeBulkPay;
+		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
+		let url = format!("{}{}?fetch_contacts={fetch_contacts}", self.api_endpoint_base_url, path);
+		let request = BulkPreOcpRequest { coins: StableCoin::dedup(coins.iter().copied()) };
+		let resp = self.with_auth(handler, self.client.post(url)).json(&request).send().await;
+		Sdk::process_response(resp).await
+	}
+
+	/// Fetch selected NCW coin balances and raw fee inputs; calculate fees locally.
+	pub async fn prefetch_ncw_balance_fee_params_bulkpay(
+		&self,
+		user_id: &str,
+		chain: ChainName,
+		coins: &[StableCoin],
+		fetch_contacts: bool,
+	) -> eyre::Result<unifi_sdk_primitives::types::PreOcpValuesNcwParamsBulk> {
+		let handler = ApiHandler::PreFetchNcwBalanceFeeParamsBulkPay;
+		let path = handler.fill_path_ordered(&[user_id.to_owned(), chain.to_string()])?;
+		let url = format!("{}{}?fetch_contacts={fetch_contacts}", self.api_endpoint_base_url, path);
+		let request = BulkPreOcpRequest { coins: StableCoin::dedup(coins.iter().copied()) };
+		let resp = self.with_auth(handler, self.client.post(url)).json(&request).send().await;
+		Sdk::process_response(resp).await
+	}
+
 	/// Fetch user's pre-ocp net balance for a coin on a chain.
 	pub async fn fetch_pre_ocp_net_balance(
 		&self,
@@ -53,15 +85,6 @@ impl Sdk {
 	/// Fetch the pre-ocp balance & est. total fees for the given coin & chain in case of on-chain
 	/// payment (OCP) by the user.
 	pub async fn fetch_pre_ocp_balance_and_est_fee(
-		&self,
-		user_id: &str,
-		payload: PreOcpPayload,
-	) -> eyre::Result<PreOcpValues> {
-		self.fetch_pre_ocp_balance_and_est_fee_with_contacts(user_id, payload, false)
-			.await
-	}
-
-	pub async fn fetch_pre_ocp_balance_and_est_fee_with_contacts(
 		&self,
 		user_id: &str,
 		payload: PreOcpPayload,
@@ -116,15 +139,6 @@ impl Sdk {
 	/// Fetch the raw allowance, balance, gas, and price inputs used to calculate one
 	/// self-custodial payment.
 	pub async fn prefetch_ncw_balance_fee_params(
-		&self,
-		user_id: &str,
-		payload: PreOcpPayload,
-	) -> eyre::Result<PreOcpValuesNcwParams> {
-		self.prefetch_ncw_balance_fee_params_with_contacts(user_id, payload, false)
-			.await
-	}
-
-	pub async fn prefetch_ncw_balance_fee_params_with_contacts(
 		&self,
 		user_id: &str,
 		payload: PreOcpPayload,

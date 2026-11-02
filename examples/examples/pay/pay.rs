@@ -56,6 +56,7 @@ async fn main() -> eyre::Result<()> {
 		sdk.fetch_pre_ocp_balance_and_est_fee(
 			user_id,
 			PreOcpPayload { coin: selected_coin, chain: selected_chain },
+			false,
 		),
 		Some("✅ Balance & fee check done!".to_string()),
 		true,

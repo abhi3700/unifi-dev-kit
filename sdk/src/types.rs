@@ -48,9 +48,11 @@ pub enum ApiHandler {
 	FetchPreOcpNetBalance,
 	FetchPreOcpTotalEstFee,
 	FetchPreOcpBalanceAndEstFee,
+	FetchPreOcpBalanceAndEstFeeBulkPay,
 	FetchPreOcpBalanceAndEstFeeNcw,
 	FetchPreOcpBalanceAndEstFeeNcwBulkPay,
 	PreFetchNcwBalanceFeeParams,
+	PreFetchNcwBalanceFeeParamsBulkPay,
 	RequestFaucet,
 	PayOnchain,
 	PayOnchainMerchant,
@@ -122,12 +124,16 @@ impl ApiHandler {
 			AH::FetchPreOcpTotalEstFee => "/payment/onchain/est_fee/{user_id}/{chain}/{coin}",
 			AH::FetchPreOcpBalanceAndEstFee =>
 				"/payment/onchain/balance_est_fee/{user_id}/{chain}/{coin}",
+			AH::FetchPreOcpBalanceAndEstFeeBulkPay =>
+				"/payment/onchain/balance_est_fee_bulkpay/{user_id}/{chain}",
 			AH::FetchPreOcpBalanceAndEstFeeNcw =>
 				"/payment/onchain/balance_est_fee_ncw/{user_id}/{is_fee_incl}",
 			AH::FetchPreOcpBalanceAndEstFeeNcwBulkPay =>
 				"/payment/onchain/balance_est_fee_ncw_bulkpay/{user_id}/{is_fee_incl}",
 			AH::PreFetchNcwBalanceFeeParams =>
-				"/payment/onchain/ncw/pre_fetch_balance_est_fee_params/{user_id}/{chain}/{coin}",
+				"/payment/onchain/ncw/prefetch_balance_est_fee_params/{user_id}/{chain}/{coin}",
+			AH::PreFetchNcwBalanceFeeParamsBulkPay =>
+				"/payment/onchain/ncw/prefetch_balance_est_fee_params_bulkpay/{user_id}/{chain}",
 			AH::RequestFaucet => "/faucet/{user_id}/{coin}/{chain}/{create_session}",
 			AH::PayOnchain => "/payment/onchain/{user_id}/{is_fee_incl}",
 			AH::PayOnchainMerchant =>
@@ -233,6 +239,10 @@ mod tests {
 				"/payment/onchain/balance_est_fee/{user_id}/{chain}/{coin}",
 			),
 			(
+				AH::FetchPreOcpBalanceAndEstFeeBulkPay,
+				"/payment/onchain/balance_est_fee_bulkpay/{user_id}/{chain}",
+			),
+			(
 				AH::FetchPreOcpBalanceAndEstFeeNcw,
 				"/payment/onchain/balance_est_fee_ncw/{user_id}/{is_fee_incl}",
 			),
@@ -242,7 +252,11 @@ mod tests {
 			),
 			(
 				AH::PreFetchNcwBalanceFeeParams,
-				"/payment/onchain/ncw/pre_fetch_balance_est_fee_params/{user_id}/{chain}/{coin}",
+				"/payment/onchain/ncw/prefetch_balance_est_fee_params/{user_id}/{chain}/{coin}",
+			),
+			(
+				AH::PreFetchNcwBalanceFeeParamsBulkPay,
+				"/payment/onchain/ncw/prefetch_balance_est_fee_params_bulkpay/{user_id}/{chain}",
 			),
 			(AH::PayOnchain, "/payment/onchain/{user_id}/{is_fee_incl}"),
 			(
@@ -265,7 +279,7 @@ mod tests {
 			),
 		];
 
-		assert_eq!(expected.len(), 26);
+		assert_eq!(expected.len(), 28);
 		for (handler, path) in expected {
 			assert_eq!(handler.path(), path);
 			assert_eq!(handler.versioned_path(ApiVersion::V1), format!("/v1{path}"));

@@ -27,6 +27,17 @@ GET {{HOST}}/v1/payment/onchain/est_fee/{{USER_ID}}/{{CHAIN}}/{{COIN}}
 GET {{HOST}}/v1/payment/onchain/balance_est_fee/{{USER_ID}}/{{CHAIN}}/{{COIN}}?fetch_contacts=false
 {{AUTH_HEADER}}
 
+### Managed-wallet bulk inputs: selected balances, BundlePay allowances and raw gas/USD prices
+# Compute one batch fee locally; fetch_contacts=true includes all contacts, including My wallet.
+# @name FetchPreOcpBalanceAndEstimateFeeBulkPay
+POST {{HOST}}/v1/payment/onchain/balance_est_fee_bulkpay/{{USER_ID}}/{{CHAIN}}?fetch_contacts=true
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+    "coins": ["USDT", "USDC"]
+}
+
 ### Self-custodial balance, allowance, and estimated fee
 # @name FetchPreOcpBalanceAndEstimateFeeNcw
 POST {{HOST}}/v1/payment/onchain/balance_est_fee_ncw/{{USER_ID}}/{{IS_FEE_INCL}}
@@ -61,5 +72,15 @@ POST {{HOST}}/v1/payment/onchain/balance_est_fee_ncw_bulkpay/{{USER_ID}}/{{IS_FE
 
 ### Raw inputs for client-side self-custodial fee calculation
 # @name PreFetchNcwBalanceFeeParams
-GET {{HOST}}/v1/payment/onchain/ncw/pre_fetch_balance_est_fee_params/{{USER_ID}}/{{CHAIN}}/{{COIN}}?fetch_contacts=false
+GET {{HOST}}/v1/payment/onchain/ncw/prefetch_balance_est_fee_params/{{USER_ID}}/{{CHAIN}}/{{COIN}}?fetch_contacts=false
 {{AUTH_HEADER}}
+
+### Raw selected-coin inputs for client-side self-custodial batch fee calculation
+# @name PreFetchNcwBalanceFeeParamsBulkPay
+POST {{HOST}}/v1/payment/onchain/ncw/prefetch_balance_est_fee_params_bulkpay/{{USER_ID}}/{{CHAIN}}?fetch_contacts=true
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+    "coins": ["USDT", "USDC"]
+}
