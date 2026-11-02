@@ -1083,8 +1083,9 @@ pub struct PreOcpValues {
 	pub contacts_next_cursor: Option<String>,
 }
 
-/// Live custodial payment inputs for multiple coins on one chain.
-/// Balances exclude pending payment reservations. Calculate one batch fee locally from
+/// Custodial payment inputs for multiple coins on one chain.
+/// Balances are conservative pre-pay values based on the lower of latest and finalized onchain
+/// balances, after subtracting pending payment reservations. Calculate one batch fee locally from
 /// these inputs; custodial approval targets BundlePay and does not use Permit2.
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct PreOcpValuesBulk {
@@ -1104,6 +1105,7 @@ pub struct PreOcpValuesBulk {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PreOcpValuesBulkCoin {
 	pub coin: StableCoin,
+	/// Safe-to-spend net balance, not the latest-block wallet balance.
 	pub balance: String,
 	/// Raw ERC20 allowance to BundlePay, in base units.
 	pub allowance: String,
@@ -1366,7 +1368,7 @@ pub struct PreOcpValuesNcwParams {
 	/// ### Usage
 	/// - compare with amount for est. gas_usage
 	pub allowance: String,
-	/// Net balance is formatted.
+	/// Safe-to-spend net balance is formatted from the lower of latest and finalized blocks.
 	/// ### Usage
 	/// - display in UI
 	/// - compare with amount for err.
@@ -1420,7 +1422,7 @@ pub struct PreOcpValuesNcwParamsBulkCoin {
 	/// ### Usage
 	/// - compare with amount for est. gas_usage
 	pub allowance: String,
-	/// Net balance is formatted.
+	/// Safe-to-spend net balance is formatted from the lower of latest and finalized blocks.
 	/// ### Usage
 	/// - display in UI
 	/// - compare with amount for err.
