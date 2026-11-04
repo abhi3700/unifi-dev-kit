@@ -89,7 +89,9 @@ pub struct Contact {
 	pub protocol: ChainProtocol,
 	pub address: String,
 	/// User-marked external wallet address that can receive funds on the user's behalf.
-	/// Must not equal the user's UniFi-managed address for this chain protocol.
+	/// Must not equal the user's wallet (custodial or self-custodial) address for this chain
+	/// protocol. \
+	/// Usage: save address(es) as salary ac 1, salary ac 2, ..
 	pub is_own_wallet: bool,
 }
 
@@ -120,8 +122,10 @@ pub struct AddContactPayload {
 	pub name: String,
 	pub protocol: ChainProtocol,
 	pub address: String,
-	/// Marks an external address controlled by the user. The protocol-matched UniFi-managed
-	/// address cannot be marked as an own-wallet contact.
+	/// User-marked external wallet address that can receive funds on the user's behalf.
+	/// Must not equal the user's wallet (custodial or self-custodial) address for this chain
+	/// protocol. \
+	/// Usage: save address(es) as salary ac 1, salary ac 2, ..
 	pub is_own_wallet: bool,
 }
 
@@ -138,8 +142,10 @@ pub struct UpdateContactPayload {
 	pub protocol: Option<ChainProtocol>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub address: Option<String>,
-	/// Marks an external address controlled by the user. The protocol-matched UniFi-managed
-	/// address cannot be marked as an own-wallet contact.
+	/// User-marked external wallet address that can receive funds on the user's behalf.
+	/// Must not equal the user's wallet (custodial or self-custodial) address for this chain
+	/// protocol. \
+	/// Usage: save address(es) as salary ac 1, salary ac 2, ..
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub is_own_wallet: Option<bool>,
 }
@@ -376,6 +382,12 @@ impl AsRef<str> for StableCoin {
 
 impl StableCoin {
 	/// Return stablecoins in canonical order with duplicates removed.
+	/// So, first sort & then remove the consecutive repeated coins.
+	///
+	/// Examples:
+	/// - `[USDC, USDT, USDC, DAI, USDT]` -> `[USDT, USDC, DAI]`.
+	/// - `[USDC, USDT, USDT, DAI, USDT]` -> `[USDT, DAI]`.
+	/// - `[USDT, USDC, DAI, USDT]` -> `[USDT, USDC, DAI]`.
 	pub fn dedup(coins: impl IntoIterator<Item = Self>) -> Vec<Self> {
 		let mut coins = coins.into_iter().collect::<Vec<_>>();
 		coins.sort_unstable();
@@ -1696,7 +1708,19 @@ impl PayOnchainNcwBulkRequest {
 	}
 }
 
-/// Receipt IDs created for a self-custodial bulk payment.
+/// Request body for a custodial-wallet bulk payment.
+///
+/// The chain applies to every item in the batch and is intentionally stored once rather than in
+/// every payment item.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+pub struct PayOnchainCwBulkRequest {
+	pub chain: ChainName,
+	pub batch: Vec<BulkPayItem>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub scheds: Option<Vec<Sched>>,
+}
+
+/// Receipt IDs created for a custodial or self-custodial bulk payment.
 #[derive(
 	Debug,
 	Default,
@@ -1818,6 +1842,40 @@ mod public_payment_contract_tests {
 		assert!(serialized.get("scheds").is_none());
 		assert_eq!(serialized["payload"]["base"]["batch"].as_array().unwrap().len(), 2);
 		assert_eq!(serialized["payload"]["base"]["tot_est_fee"], "0.24");
+	}
+
+	#[test]
+	fn cw_bulk_request_keeps_chain_at_batch_level() {
+		let request = PayOnchainCwBulkRequest {
+			chain: ChainName::Sepolia,
+			batch: vec![
+				BulkPayItem::new(
+					StableCoin::USDT,
+					"0x2222222222222222222222222222222222222222",
+					"10.25",
+					&Memo::BulkPay,
+				),
+				BulkPayItem::new(
+					StableCoin::USDC,
+					"0x3333333333333333333333333333333333333333",
+					"2.50",
+					&Memo::BulkPay,
+				),
+			],
+			scheds: None,
+		};
+		let serialized = serde_json::to_value(request).unwrap();
+
+		assert_eq!(serialized["chain"], "Sepolia");
+		assert!(serialized.get("scheds").is_none());
+		assert_eq!(serialized["batch"].as_array().unwrap().len(), 2);
+		assert!(
+			serialized["batch"]
+				.as_array()
+				.unwrap()
+				.iter()
+				.all(|item| item.get("chain").is_none())
+		);
 	}
 
 	#[test]

@@ -18,6 +18,10 @@ name = "pay"
 path = "examples/pay/pay.rs"
 
 [[example]]
+name = "bulk_pay"
+path = "examples/pay/bulk_pay.rs"
+
+[[example]]
 name = "pay_receipt"
 path = "examples/pay/pay_receipt.rs"
 

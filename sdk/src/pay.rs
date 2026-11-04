@@ -3,10 +3,10 @@ use unifi_sdk_primitives::{
 	permit2::DomainPermitForSig,
 	types::{
 		BulkPayBase, BulkPayItem, BulkPayItemRequest, BulkPayResponse, BulkPreOcpRequest,
-		ChainName, OcPayHistory, OcPayReceipt, PayHistoryFilterParams, PayOnchainNcwBulkRequest,
-		PayOnchainNcwRequest, PayOnchainPayload, PayOnchainPayloadNcw, PayOnchainPayloadNcwBase,
-		PayOnchainRequest, PreOcpPayload, PreOcpValues, PreOcpValuesNcw, PreOcpValuesNcwBulk,
-		PreOcpValuesNcwParams, StableCoin,
+		ChainName, OcPayHistory, OcPayReceipt, PayHistoryFilterParams, PayOnchainCwBulkRequest,
+		PayOnchainNcwBulkRequest, PayOnchainNcwRequest, PayOnchainPayload, PayOnchainPayloadNcw,
+		PayOnchainPayloadNcwBase, PayOnchainRequest, PreOcpPayload, PreOcpValues, PreOcpValuesNcw,
+		PreOcpValuesNcwBulk, PreOcpValuesNcwParams, StableCoin,
 	},
 };
 
@@ -193,7 +193,25 @@ impl Sdk {
 		Sdk::process_response::<String>(resp).await
 	}
 
-	/// Pay a merchant from a UniFi-managed wallet.
+	/// Submit same-chain payments from a UniFi-custodial wallet.
+	///
+	/// Every request is executed through UniFi's controlled-wallet flow and returns its own
+	/// receipt ID. No Permit2 nonce or client-side signature is required.
+	pub async fn bulk_pay_cw(
+		&self,
+		user_id: &str,
+		is_fee_incl: bool,
+		request: &PayOnchainCwBulkRequest,
+	) -> eyre::Result<BulkPayResponse> {
+		let handler = ApiHandler::BulkPayCw;
+		let path = handler.fill_path_ordered(&[user_id.to_owned(), is_fee_incl.to_string()])?;
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
+		let resp = self.with_auth(handler, self.client.post(url)).json(request).send().await;
+
+		Sdk::process_response::<BulkPayResponse>(resp).await
+	}
+
+	/// Pay a merchant from a UniFi-custodial wallet.
 	///
 	/// Returns an error when the merchant session is already paid or another payment for the same
 	/// session is being submitted.

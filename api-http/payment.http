@@ -34,6 +34,31 @@ POST {{HOST}}/v1/payment/onchain/{{USER_ID}}/{{IS_FEE_INCL}}
     "sched": null
 }
 
+### Submit same-chain payments from a managed wallet
+# @name BulkPayCw
+POST {{HOST}}/v1/payment/onchain/cw_bulkpay/{{USER_ID}}/{{IS_FEE_INCL}}
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+    "chain": "{{CHAIN}}",
+    "batch": [
+        {
+            "coin": "{{COIN}}",
+            "to_address": "{{TO_ADDRESS}}",
+            "amount": "10.124",
+            "memo": "BulkPay"
+        },
+        {
+            "coin": "USDC",
+            "to_address": "{{SECOND_TO_ADDRESS}}",
+            "amount": "2.50",
+            "memo": "BulkPay"
+        }
+    ],
+    "scheds": null
+}
+
 ### Managed-wallet merchant payment
 # @name PayOnchainMerchant
 POST {{HOST}}/v1/payment/onchain/merchant/{{USER_ID}}/{{IS_FEE_INCL}}/{{SESSION_ID}}

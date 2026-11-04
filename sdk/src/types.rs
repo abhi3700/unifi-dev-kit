@@ -61,6 +61,7 @@ pub enum ApiHandler {
 	CreateDomainPermitForSig,
 	CreateDomainPermitForSigBulkPay,
 	PayOnchainNcw,
+	BulkPayCw,
 	BulkPayNcw,
 	FliqNotifyPayer,
 	GetOcpReceipt,
@@ -144,6 +145,7 @@ impl ApiHandler {
 			AH::CreateDomainPermitForSigBulkPay =>
 				"/payment/onchain/ncw/create_domain_permit_bulkpay/{user_id}",
 			AH::PayOnchainNcw => "/payment/onchain/ncw/{user_id}",
+			AH::BulkPayCw => "/payment/onchain/cw_bulkpay/{user_id}/{is_fee_incl}",
 			AH::BulkPayNcw => "/payment/onchain/ncw_bulkpay/{user_id}",
 			AH::FliqNotifyPayer =>
 				"/payment/onchain/fliq/notify/payer/{pid}/{chain}/{coin}/{to_address}/{amount}",
@@ -269,6 +271,7 @@ mod tests {
 				"/payment/onchain/ncw/create_domain_permit_bulkpay/{user_id}",
 			),
 			(AH::PayOnchainNcw, "/payment/onchain/ncw/{user_id}"),
+			(AH::BulkPayCw, "/payment/onchain/cw_bulkpay/{user_id}/{is_fee_incl}"),
 			(AH::BulkPayNcw, "/payment/onchain/ncw_bulkpay/{user_id}"),
 			(AH::PayOnchainMerchantNcw, "/payment/onchain/ncw/merchant/{user_id}/{session_id}"),
 			(AH::GetPaymentSessionStatus, "/payment/merchant/session/{session_id}"),
@@ -279,7 +282,7 @@ mod tests {
 			),
 		];
 
-		assert_eq!(expected.len(), 28);
+		assert_eq!(expected.len(), 29);
 		for (handler, path) in expected {
 			assert_eq!(handler.path(), path);
 			assert_eq!(handler.versioned_path(ApiVersion::V1), format!("/v1{path}"));
