@@ -2,11 +2,11 @@ use crate::{Sdk, types::ApiHandler};
 use unifi_sdk_primitives::{
 	permit2::DomainPermitForSig,
 	types::{
-		BulkPayBase, BulkPayItem, BulkPayItemRequest, BulkPayResponse, BulkPreOcpRequest,
-		ChainName, OcPayHistory, OcPayReceipt, PayHistoryFilterParams, PayOnchainCwBulkRequest,
-		PayOnchainNcwBulkRequest, PayOnchainNcwRequest, PayOnchainPayload, PayOnchainPayloadNcw,
-		PayOnchainPayloadNcwBase, PayOnchainRequest, PreOcpPayload, PreOcpValues, PreOcpValuesNcw,
-		PreOcpValuesNcwBulk, PreOcpValuesNcwParams, StableCoin,
+		BulkPayBase, BulkPayItem, BulkPayItemRequest, BulkPayReceiptGroup, BulkPayResponse,
+		BulkPreOcpRequest, ChainName, OcPayHistory, OcPayReceipt, PayHistoryFilterParams,
+		PayOnchainCwBulkRequest, PayOnchainNcwBulkRequest, PayOnchainNcwRequest, PayOnchainPayload,
+		PayOnchainPayloadNcw, PayOnchainPayloadNcwBase, PayOnchainRequest, PreOcpPayload,
+		PreOcpValues, PreOcpValuesNcw, PreOcpValuesNcwBulk, PreOcpValuesNcwParams, StableCoin,
 	},
 };
 
@@ -349,6 +349,19 @@ impl Sdk {
 		let resp = self.with_auth(handler, self.client.get(url)).send().await;
 
 		Sdk::process_response::<OcPayReceipt>(resp).await
+	}
+
+	/// View the ordered receipts created by one bulk-payment submission.
+	pub async fn get_bulk_pay_receipts(
+		&self,
+		bulk_pay_id: &str,
+	) -> eyre::Result<BulkPayReceiptGroup> {
+		let handler = ApiHandler::GetBulkPayReceipts;
+		let path = handler.fill_path_ordered(&[bulk_pay_id.to_owned()])?;
+		let url = format!("{}{}", self.api_endpoint_base_url, path);
+		let resp = self.with_auth(handler, self.client.get(url)).send().await;
+
+		Sdk::process_response::<BulkPayReceiptGroup>(resp).await
 	}
 
 	/// View onchain payment receipts for a user_id

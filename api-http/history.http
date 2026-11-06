@@ -19,6 +19,12 @@ GET {{HOST}}/v1/payment/merchant/session/{{SESSION_ID}}
 GET {{HOST}}/v1/payment/onchain/receipt/{{RECEIPT_ID}}
 {{AUTH_HEADER}}
 
+### All receipts from one bulk-payment submission
+# @name GetBulkPayReceipts
+@BULK_PAY_ID=1b0123456789abcdef01234567
+GET {{HOST}}/v1/payment/onchain/bulkpay/{{BULK_PAY_ID}}
+{{AUTH_HEADER}}
+
 @SORT_BY_LATEST=true
 @FIRST_PAGE_FROM_START=true
 @NEXT_PAGE_FROM_START=false

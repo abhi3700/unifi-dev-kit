@@ -696,6 +696,11 @@ pub struct OcPayHistory {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct OcPayReceipt {
 	pub id: String,
+	/// Identifier shared by every receipt created by one bulk-payment submission.
+	///
+	/// Legacy and single-payment receipts omit this field.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub bulk_pay_id: Option<String>,
 	pub entity: String,
 	/// Can be used to detect if payer was custodial or non-custodial.
 	pub user_id: String,
@@ -725,6 +730,7 @@ impl Default for OcPayReceipt {
 	fn default() -> Self {
 		Self {
 			id: Default::default(),
+			bulk_pay_id: None,
 			entity: Default::default(),
 			user_id: Default::default(),
 			is_fee_incl: Default::default(),
@@ -1726,7 +1732,7 @@ pub struct PayOnchainCwBulkRequest {
 	pub scheds: Option<Vec<Sched>>,
 }
 
-/// Receipt IDs created for a custodial or self-custodial bulk payment.
+/// Identifier and receipt IDs created for a custodial or self-custodial bulk payment.
 #[derive(
 	Debug,
 	Default,
@@ -1740,7 +1746,16 @@ pub struct PayOnchainCwBulkRequest {
 	RkyvDeserialize,
 )]
 pub struct BulkPayResponse {
+	#[serde(default)]
+	pub bulk_pay_id: String,
 	pub receipt_ids: Vec<String>,
+}
+
+/// Ordered receipts created by one bulk-payment submission.
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BulkPayReceiptGroup {
+	pub bulk_pay_id: String,
+	pub receipts: Vec<OcPayReceipt>,
 }
 
 #[cfg(test)]
@@ -1899,13 +1914,26 @@ mod public_payment_contract_tests {
 	}
 
 	#[test]
-	fn bulk_pay_response_keeps_storage_archive_compatibility() {
-		let response =
-			BulkPayResponse { receipt_ids: vec!["receipt-1".to_owned(), "receipt-2".to_owned()] };
+	fn bulk_pay_response_supports_storage_archive_roundtrip() {
+		let response = BulkPayResponse {
+			bulk_pay_id: "1bbulk".to_owned(),
+			receipt_ids: vec!["receipt-1".to_owned(), "receipt-2".to_owned()],
+		};
 		let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&response).unwrap();
 		let decoded = rkyv::from_bytes::<BulkPayResponse, rkyv::rancor::Error>(&bytes).unwrap();
 
 		assert_eq!(decoded, response);
+	}
+
+	#[test]
+	fn receipt_exposes_its_bulk_payment_id_when_present() {
+		let receipt = OcPayReceipt {
+			bulk_pay_id: Some("1b0123456789abcdef01234567".to_owned()),
+			..Default::default()
+		};
+		let serialized = serde_json::to_value(receipt).unwrap();
+
+		assert_eq!(serialized["bulk_pay_id"], "1b0123456789abcdef01234567");
 	}
 }
 

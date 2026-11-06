@@ -71,6 +71,7 @@ async fn main() -> eyre::Result<()> {
 	.await
 	.unwrap_or_else(|error| panic!("{}", error.to_string().red().bold()));
 
+	println!("{}", format!("📦 Bulk payment ID: {}", response.bulk_pay_id).green().bold());
 	for (index, receipt_id) in response.receipt_ids.iter().enumerate() {
 		println!("{}", format!("🧾 Payment {} receipt: {receipt_id}", index + 1).green().bold());
 	}

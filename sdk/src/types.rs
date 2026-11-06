@@ -63,6 +63,7 @@ pub enum ApiHandler {
 	PayOnchainNcw,
 	BulkPayCw,
 	BulkPayNcw,
+	GetBulkPayReceipts,
 	FliqNotifyPayer,
 	GetOcpReceipt,
 	GetOcpReceipts,
@@ -147,6 +148,7 @@ impl ApiHandler {
 			AH::PayOnchainNcw => "/payment/onchain/ncw/{user_id}",
 			AH::BulkPayCw => "/payment/onchain/cw_bulkpay/{user_id}/{is_fee_incl}",
 			AH::BulkPayNcw => "/payment/onchain/ncw_bulkpay/{user_id}",
+			AH::GetBulkPayReceipts => "/payment/onchain/bulkpay/{bulk_pay_id}",
 			AH::FliqNotifyPayer =>
 				"/payment/onchain/fliq/notify/payer/{pid}/{chain}/{coin}/{to_address}/{amount}",
 			AH::GetOcpReceipt => "/payment/onchain/receipt/{receipt_id}",
@@ -273,6 +275,7 @@ mod tests {
 			(AH::PayOnchainNcw, "/payment/onchain/ncw/{user_id}"),
 			(AH::BulkPayCw, "/payment/onchain/cw_bulkpay/{user_id}/{is_fee_incl}"),
 			(AH::BulkPayNcw, "/payment/onchain/ncw_bulkpay/{user_id}"),
+			(AH::GetBulkPayReceipts, "/payment/onchain/bulkpay/{bulk_pay_id}"),
 			(AH::PayOnchainMerchantNcw, "/payment/onchain/ncw/merchant/{user_id}/{session_id}"),
 			(AH::GetPaymentSessionStatus, "/payment/merchant/session/{session_id}"),
 			(AH::GetOcpReceipt, "/payment/onchain/receipt/{receipt_id}"),
@@ -282,7 +285,7 @@ mod tests {
 			),
 		];
 
-		assert_eq!(expected.len(), 29);
+		assert_eq!(expected.len(), 30);
 		for (handler, path) in expected {
 			assert_eq!(handler.path(), path);
 			assert_eq!(handler.versioned_path(ApiVersion::V1), format!("/v1{path}"));

@@ -77,6 +77,7 @@ pub fn ask_yes_no(question: &str) -> eyre::Result<bool> {
 pub fn display_pay_receipt(receipt: OcPayReceipt) {
 	let OcPayReceipt {
 		id,
+		bulk_pay_id,
 		chain,
 		coin,
 		to_address,
@@ -93,6 +94,9 @@ pub fn display_pay_receipt(receipt: OcPayReceipt) {
 	} = receipt;
 	println!("{}", "----------------------------------------".dimmed());
 	println!("{} {}", "Receipt ID:".bright_blue().bold(), id);
+	if let Some(bulk_pay_id) = bulk_pay_id {
+		println!("{} {}", "Bulk payment ID:".bright_blue().bold(), bulk_pay_id);
+	}
 	println!("{} {}", "Chain:".bright_blue().bold(), chain);
 
 	// Show coins with amounts and addresses
