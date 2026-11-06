@@ -705,6 +705,11 @@ pub struct OcPayReceipt {
 	pub to_address: String,
 	pub amount: String,
 	pub memo: Memo,
+	/// Coin in which `est_fee` and `act_fee` are denominated.
+	///
+	/// Legacy and single-payment receipts omit this field, in which case `coin` is the fee coin.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub fee_coin: Option<StableCoin>,
 	pub est_fee: String,
 	pub act_fee: String,
 	pub tx_hash: String,
@@ -728,6 +733,7 @@ impl Default for OcPayReceipt {
 			to_address: Default::default(),
 			amount: Default::default(),
 			memo: Default::default(),
+			fee_coin: None,
 			est_fee: Self::default_est_fee(),
 			act_fee: Self::default_act_fee(),
 			tx_hash: Default::default(),
@@ -1876,6 +1882,20 @@ mod public_payment_contract_tests {
 				.iter()
 				.all(|item| item.get("chain").is_none())
 		);
+	}
+
+	#[test]
+	fn receipt_exposes_a_distinct_bulk_fee_coin() {
+		let receipt = OcPayReceipt {
+			coin: StableCoin::USDT,
+			fee_coin: Some(StableCoin::DAI),
+			est_fee: "0.12".to_owned(),
+			act_fee: "0.10".to_owned(),
+			..Default::default()
+		};
+		let serialized = serde_json::to_value(receipt).unwrap();
+		assert_eq!(serialized["coin"], "USDT");
+		assert_eq!(serialized["fee_coin"], "DAI");
 	}
 
 	#[test]

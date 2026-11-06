@@ -82,6 +82,7 @@ pub fn display_pay_receipt(receipt: OcPayReceipt) {
 		to_address,
 		amount,
 		memo,
+		fee_coin,
 		est_fee,
 		act_fee,
 		tx_hash,
@@ -109,11 +110,11 @@ pub fn display_pay_receipt(receipt: OcPayReceipt) {
 	}
 
 	if !est_fee.trim().is_empty() {
-		println!("{} {}", "Est. Fee".magenta().bold(), est_fee);
+		println!("{} {} {}", "Est. Fee".magenta().bold(), est_fee, fee_coin.unwrap_or(coin));
 	}
 
 	if !act_fee.trim().is_empty() {
-		println!("{} {}", "Act. Fee".magenta().bold(), act_fee);
+		println!("{} {} {}", "Act. Fee".magenta().bold(), act_fee, fee_coin.unwrap_or(coin));
 	}
 
 	// Status with color
