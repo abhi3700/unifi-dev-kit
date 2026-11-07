@@ -701,6 +701,12 @@ pub struct OcPayReceipt {
 	/// Legacy and single-payment receipts omit this field.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub bulk_pay_id: Option<String>,
+	/// Stable sequencer bundle that executed this receipt.
+	///
+	/// Receipts sharing this value were submitted through the same onchain transaction. Legacy
+	/// payloads may omit it, in which case consumers can fall back to a non-empty `tx_hash`.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub bundle_id: Option<i64>,
 	pub entity: String,
 	/// Can be used to detect if payer was custodial or non-custodial.
 	pub user_id: String,
@@ -731,6 +737,7 @@ impl Default for OcPayReceipt {
 		Self {
 			id: Default::default(),
 			bulk_pay_id: None,
+			bundle_id: None,
 			entity: Default::default(),
 			user_id: Default::default(),
 			is_fee_incl: Default::default(),
@@ -1929,11 +1936,13 @@ mod public_payment_contract_tests {
 	fn receipt_exposes_its_bulk_payment_id_when_present() {
 		let receipt = OcPayReceipt {
 			bulk_pay_id: Some("1b0123456789abcdef01234567".to_owned()),
+			bundle_id: Some(42),
 			..Default::default()
 		};
 		let serialized = serde_json::to_value(receipt).unwrap();
 
 		assert_eq!(serialized["bulk_pay_id"], "1b0123456789abcdef01234567");
+		assert_eq!(serialized["bundle_id"], 42);
 	}
 }
 

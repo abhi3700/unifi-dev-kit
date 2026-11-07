@@ -78,6 +78,7 @@ pub fn display_pay_receipt(receipt: OcPayReceipt) {
 	let OcPayReceipt {
 		id,
 		bulk_pay_id,
+		bundle_id,
 		chain,
 		coin,
 		to_address,
@@ -96,6 +97,9 @@ pub fn display_pay_receipt(receipt: OcPayReceipt) {
 	println!("{} {}", "Receipt ID:".bright_blue().bold(), id);
 	if let Some(bulk_pay_id) = bulk_pay_id {
 		println!("{} {}", "Bulk payment ID:".bright_blue().bold(), bulk_pay_id);
+	}
+	if let Some(bundle_id) = bundle_id {
+		println!("{} {}", "Execution bundle:".bright_blue().bold(), bundle_id);
 	}
 	println!("{} {}", "Chain:".bright_blue().bold(), chain);
 
