@@ -88,6 +88,11 @@ pub struct Contact {
 	pub name: String,
 	pub protocol: ChainProtocol,
 	pub address: String,
+	/// Batch memberships computed from the contact-batches collection when `with_batch` is true.
+	///
+	/// This is empty on the contacts-only read path. The relationship is not duplicated in the
+	/// stored contact document.
+	pub batch_ids: Vec<String>,
 	/// User-marked external wallet address that can receive funds on the user's behalf.
 	/// Must not equal the user's wallet (custodial or self-custodial) address for this chain
 	/// protocol. \
@@ -101,10 +106,18 @@ pub struct ContactPage {
 	pub total: u64,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub next_cursor: Option<String>,
+	/// Present only when `ContactListParams::with_batch` is true.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub batches: Option<ContactBatchPage>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct ContactListParams {
+	/// Include batch memberships on each contact and a separately paginated batch page.
+	///
+	/// When false, the backend reads only the contacts collection.
+	#[serde(default)]
+	pub with_batch: bool,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub protocol: Option<ChainProtocol>,
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -115,6 +128,10 @@ pub struct ContactListParams {
 	pub cursor: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub limit: Option<u32>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub batch_cursor: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub batch_limit: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -129,9 +146,127 @@ pub struct AddContactPayload {
 	pub is_own_wallet: bool,
 }
 
+/// Desired contact and optional contact-batch changes applied by one backend transaction.
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
-pub struct AddContactMainPayload {
+pub struct UpsertContactsPayload {
+	/// New contacts. An already stored protocol/address identity is an idempotent no-op.
+	#[serde(default)]
 	pub contacts: Vec<AddContactPayload>,
+	/// Existing contacts to update by ID.
+	#[serde(default)]
+	pub updates: Vec<UpdateContactItem>,
+	/// Apply the final batch state described by the batch fields.
+	#[serde(default)]
+	pub save_batch: bool,
+	/// Existing batch to update. Absence creates a new batch when `save_batch` is true.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub batch_id: Option<String>,
+	/// Already-saved members. Submitted new/updated contacts are also batch members.
+	#[serde(default)]
+	pub batch_contact_ids: Vec<String>,
+	/// Final optional display name. Ignored when `save_batch` is false.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub batch_name: Option<String>,
+}
+
+/// Contacts and optional batch state resolved by `upsert_contacts`.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct UpsertContactsResult {
+	pub contacts: Vec<Contact>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub batch: Option<ContactBatch>,
+}
+
+/// Request for deleting a batch and optionally cascading deletion of its member contacts through
+/// every other affected batch.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub struct DeleteContactBatchPayload {
+	pub del_its_contacts: bool,
+}
+
+/// One entry in a bulk contact-update request.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct UpdateContactItem {
+	pub contact_id: String,
+	pub update: UpdateContactPayload,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct DeleteContactsPayload {
+	pub contact_ids: Vec<String>,
+}
+
+/// How deleting selected contacts affects one saved batch.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ContactBatchDeletionImpact {
+	pub id: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub name: Option<String>,
+	/// Selected contacts currently linked to this batch.
+	pub removed_contact_ids: Vec<String>,
+	/// Members retained if the batch survives. This can contain fewer than two entries when the
+	/// batch appears in `DeleteContactsImpact::batches_to_delete`.
+	pub remaining_contact_ids: Vec<String>,
+}
+
+/// Read-only preview, and committed result, for deleting one or more contacts.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct DeleteContactsImpact {
+	/// Validated, de-duplicated contact IDs that will be deleted.
+	pub contact_ids: Vec<String>,
+	/// Selected contacts that are not linked to any batch.
+	pub unlinked_contact_ids: Vec<String>,
+	/// Batches removed because fewer than two members remain, or because the remaining membership
+	/// would duplicate another retained batch.
+	pub batches_to_delete: Vec<ContactBatchDeletionImpact>,
+	/// Batches that remain after the selected contacts are delinked.
+	pub batches_to_delink: Vec<ContactBatchDeletionImpact>,
+}
+
+/// A reusable group of contacts. Contact details remain in the contacts collection.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ContactBatch {
+	pub id: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub name: Option<String>,
+	pub contact_ids: Vec<String>,
+	pub created_at_us: i64,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ContactBatchPage {
+	pub batches: Vec<ContactBatch>,
+	pub total: u64,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub next_cursor: Option<String>,
+}
+
+/// One saved batch with the complete contact records required by the client Batch View.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ContactBatchWithContacts {
+	pub id: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub name: Option<String>,
+	pub contacts: Vec<Contact>,
+	pub created_at_us: i64,
+}
+
+/// Cursor pagination for the lazy Batch View request.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ContactBatchListParams {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub cursor: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub limit: Option<u32>,
+}
+
+/// Independently paginated Batch View response with every batch's contacts resolved.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ContactBatchViewPage {
+	pub batches: Vec<ContactBatchWithContacts>,
+	pub total: u64,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub next_cursor: Option<String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -1719,6 +1854,11 @@ pub struct PayOnchainNcwBulkRequest {
 	pub payload: PayOnchainPayloadNcwBulk,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub scheds: Option<Vec<Sched>>,
+	/// Persist the deduplicated recipients as one reusable contact batch.
+	pub save_batch: bool,
+	/// Optional display name for the saved batch. Ignored when `save_batch` is false.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub batch_name: Option<String>,
 }
 
 impl PayOnchainNcwBulkRequest {
@@ -1737,6 +1877,11 @@ pub struct PayOnchainCwBulkRequest {
 	pub batch: Vec<BulkPayItem>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub scheds: Option<Vec<Sched>>,
+	/// Persist the deduplicated recipients as one reusable contact batch.
+	pub save_batch: bool,
+	/// Optional display name for the saved batch. Ignored when `save_batch` is false.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub batch_name: Option<String>,
 }
 
 /// Identifier and receipt IDs created for a custodial or self-custodial bulk payment.
@@ -1864,10 +2009,14 @@ mod public_payment_contract_tests {
 				sig: "0xbulk-permit-signature".to_owned(),
 			},
 			scheds: None,
+			save_batch: true,
+			batch_name: Some("Payroll".to_owned()),
 		};
 		let serialized = serde_json::to_value(request).unwrap();
 
 		assert!(serialized.get("scheds").is_none());
+		assert_eq!(serialized["save_batch"], true);
+		assert_eq!(serialized["batch_name"], "Payroll");
 		assert_eq!(serialized["payload"]["base"]["batch"].as_array().unwrap().len(), 2);
 		assert_eq!(serialized["payload"]["base"]["tot_est_fee"], "0.24");
 	}
@@ -1891,11 +2040,15 @@ mod public_payment_contract_tests {
 				),
 			],
 			scheds: None,
+			save_batch: true,
+			batch_name: Some("Payroll".to_owned()),
 		};
 		let serialized = serde_json::to_value(request).unwrap();
 
 		assert_eq!(serialized["chain"], "Sepolia");
 		assert!(serialized.get("scheds").is_none());
+		assert_eq!(serialized["save_batch"], true);
+		assert_eq!(serialized["batch_name"], "Payroll");
 		assert_eq!(serialized["batch"].as_array().unwrap().len(), 2);
 		assert!(
 			serialized["batch"]
@@ -1904,6 +2057,25 @@ mod public_payment_contract_tests {
 				.iter()
 				.all(|item| item.get("chain").is_none())
 		);
+	}
+
+	#[test]
+	fn bulk_payment_save_batch_is_required_while_contact_upsert_defaults_to_false() {
+		let contacts =
+			serde_json::from_value::<UpsertContactsPayload>(serde_json::json!({})).unwrap();
+		assert!(!contacts.save_batch);
+
+		let mut cw = serde_json::to_value(PayOnchainCwBulkRequest::default()).unwrap();
+		cw.as_object_mut().unwrap().remove("save_batch");
+		assert!(serde_json::from_value::<PayOnchainCwBulkRequest>(cw).is_err());
+
+		let mut ncw = serde_json::to_value(PayOnchainNcwBulkRequest::default()).unwrap();
+		ncw.as_object_mut().unwrap().remove("save_batch");
+		assert!(serde_json::from_value::<PayOnchainNcwBulkRequest>(ncw).is_err());
+
+		let mut delete = serde_json::to_value(DeleteContactBatchPayload::default()).unwrap();
+		delete.as_object_mut().unwrap().remove("del_its_contacts");
+		assert!(serde_json::from_value::<DeleteContactBatchPayload>(delete).is_err());
 	}
 
 	#[test]

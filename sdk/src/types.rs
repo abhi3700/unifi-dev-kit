@@ -37,12 +37,14 @@ pub enum ApiHandler {
 	GetUserProfile,
 
 	/* Contacts */
-	AddUserContacts,
-	DelUserContact,
-	UpdateUserContact,
+	UpsertContacts,
+	DeleteContacts,
 	GetUserContacts,
 	GetUserContactById,
 	GetUserContactsByName,
+	GetContactBatches,
+	GetContactBatch,
+	DelContactBatch,
 
 	/* Payment Onchain */
 	FetchPreOcpNetBalance,
@@ -105,10 +107,11 @@ impl ApiHandler {
 			AH::SetUserProfile | AH::GetUserProfile => "/profile/{user_id}",
 
 			/* Contacts */
-			AH::GetUserContacts | AH::AddUserContacts => "/contacts/{user_id}",
-			AH::DelUserContact | AH::UpdateUserContact | AH::GetUserContactById =>
-				"/contacts/{user_id}/{contact_id}",
+			AH::GetUserContacts | AH::UpsertContacts | AH::DeleteContacts => "/contacts/{user_id}",
+			AH::GetUserContactById => "/contacts/{user_id}/{contact_id}",
 			AH::GetUserContactsByName => "/contacts/by_name/{user_id}/{name}",
+			AH::GetContactBatches => "/contact_batches/{user_id}",
+			AH::GetContactBatch | AH::DelContactBatch => "/contact_batches/{user_id}/{batch_id}",
 
 			/* Wallet */
 			AH::GetUserWalletAddress => "/wallet/address/{user_id}/{chain}",
@@ -228,6 +231,10 @@ mod tests {
 		let expected = [
 			(AH::Healthz, "/healthz"),
 			(AH::HealthCheck, "/health"),
+			(AH::UpsertContacts, "/contacts/{user_id}"),
+			(AH::GetContactBatches, "/contact_batches/{user_id}"),
+			(AH::GetContactBatch, "/contact_batches/{user_id}/{batch_id}"),
+			(AH::DelContactBatch, "/contact_batches/{user_id}/{batch_id}"),
 			(AH::GetUserWalletAddress, "/wallet/address/{user_id}/{chain}"),
 			(AH::GetUserWalletAddresses, "/wallet/addresses/{user_id}"),
 			(AH::GetOcChainCoinBalance, "/wallet/onchain/balance/{user_id}/{chain}/{coin}"),
@@ -285,7 +292,7 @@ mod tests {
 			),
 		];
 
-		assert_eq!(expected.len(), 30);
+		assert_eq!(expected.len(), 34);
 		for (handler, path) in expected {
 			assert_eq!(handler.path(), path);
 			assert_eq!(handler.versioned_path(ApiVersion::V1), format!("/v1{path}"));

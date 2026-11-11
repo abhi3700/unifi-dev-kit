@@ -41,6 +41,8 @@ async fn main() -> eyre::Result<()> {
 			},
 		],
 		scheds: None,
+		save_batch: true,
+		batch_name: Some("Example payroll".to_owned()),
 	};
 
 	let coins = request.batch.iter().map(|item| item.coin).collect::<Vec<_>>();

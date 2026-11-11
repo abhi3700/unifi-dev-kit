@@ -1,0 +1,128 @@
+### Contacts and reusable batches
+@HOST={{base_url}}
+@USER_ID={{user_id}}
+@AUTH_HEADER=Authorization: Bearer {{api_key}}
+@CONTENT_TYPE=Content-Type: application/json
+@CONTACT_ID=replace-with-contact-id
+@SECOND_CONTACT_ID=replace-with-second-contact-id
+@THIRD_CONTACT_ID=replace-with-third-contact-id
+@BATCH_ID=replace-with-batch-id
+
+### Contacts only: one contacts-collection aggregation and no contact_batches read
+# @name GetContactsOnly
+GET {{HOST}}/v1/contacts/{{USER_ID}}?with_batch=false&limit=50
+{{AUTH_HEADER}}
+
+### Contacts plus memberships and an independently paginated batch page
+# @name GetContactsWithBatches
+GET {{HOST}}/v1/contacts/{{USER_ID}}?with_batch=true&limit=50&batch_limit=25
+{{AUTH_HEADER}}
+
+### Upsert multiple contacts and optionally save them as one batch
+# @name UpsertContacts
+POST {{HOST}}/v1/contacts/{{USER_ID}}
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+    "contacts": [
+        {
+            "name": "Alice",
+            "protocol": "Evm",
+            "address": "0x2222222222222222222222222222222222222222",
+            "is_own_wallet": false
+        },
+        {
+            "name": "Bob",
+            "protocol": "Evm",
+            "address": "0x3333333333333333333333333333333333333333",
+            "is_own_wallet": false
+        }
+    ],
+    "save_batch": true,
+    "batch_name": "Payroll team"
+}
+
+### Create a batch from existing contacts through the same upsert route
+# @name UpsertExistingContactsBatch
+POST {{HOST}}/v1/contacts/{{USER_ID}}
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+	"save_batch": true,
+	"batch_contact_ids": ["{{CONTACT_ID}}", "{{SECOND_CONTACT_ID}}"],
+	"batch_name": "Existing contacts"
+}
+
+### Update multiple contacts in one bulk write through the same upsert route
+# @name UpsertContactUpdates
+POST {{HOST}}/v1/contacts/{{USER_ID}}
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+	"updates": [
+        {
+            "contact_id": "{{CONTACT_ID}}",
+            "update": {"name": "Alice updated"}
+        },
+        {
+            "contact_id": "{{SECOND_CONTACT_ID}}",
+            "update": {"name": "Bob updated"}
+        }
+    ]
+}
+
+### Preview which named batches will be deleted or delinked
+# @name PreviewDeleteContacts
+POST {{HOST}}/v1/contacts/{{USER_ID}}/delete_impact
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+    "contact_ids": ["{{CONTACT_ID}}", "{{SECOND_CONTACT_ID}}"]
+}
+
+### Delete one or many contacts and reconcile every affected batch
+# @name DeleteContacts
+DELETE {{HOST}}/v1/contacts/{{USER_ID}}
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+    "contact_ids": ["{{CONTACT_ID}}", "{{SECOND_CONTACT_ID}}"]
+}
+
+### List batches for import
+# @name GetContactBatches
+GET {{HOST}}/v1/contact_batches/{{USER_ID}}?limit=25
+{{AUTH_HEADER}}
+
+### Get one batch
+# @name GetContactBatch
+GET {{HOST}}/v1/contact_batches/{{USER_ID}}/{{BATCH_ID}}
+{{AUTH_HEADER}}
+
+### Replace a batch's final membership atomically
+# @name UpsertContactBatch
+POST {{HOST}}/v1/contacts/{{USER_ID}}
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+	"save_batch": true,
+	"batch_id": "{{BATCH_ID}}",
+	"batch_contact_ids": ["{{SECOND_CONTACT_ID}}", "{{THIRD_CONTACT_ID}}"],
+	"batch_name": "Updated team"
+}
+
+### Delete a batch and optionally cascade-delete its contacts
+# @name DeleteContactBatch
+DELETE {{HOST}}/v1/contact_batches/{{USER_ID}}/{{BATCH_ID}}
+{{AUTH_HEADER}}
+{{CONTENT_TYPE}}
+
+{
+    "del_its_contacts": false
+}

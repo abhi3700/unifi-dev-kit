@@ -56,7 +56,9 @@ POST {{HOST}}/v1/payment/onchain/cw_bulkpay/{{USER_ID}}/{{IS_FEE_INCL}}
             "memo": "BulkPay"
         }
     ],
-    "scheds": null
+    "scheds": null,
+    "save_batch": true,
+    "batch_name": "Managed payroll"
 }
 
 ### Managed-wallet merchant payment
@@ -167,7 +169,9 @@ POST {{HOST}}/v1/payment/onchain/ncw_bulkpay/{{USER_ID}}
         "nonce": "{{NONCE}}",
         "sig": "{{PERMIT_SIGNATURE}}"
     },
-    "scheds": null
+    "scheds": null,
+    "save_batch": true,
+    "batch_name": "Self-custodial payroll"
 }
 
 ### Submit a signed self-custodial merchant payment
