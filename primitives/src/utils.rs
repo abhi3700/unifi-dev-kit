@@ -247,9 +247,19 @@ fn calc_ncw_est_fee_snapshot(
 	//       / price_denom
 	let est_gas_fee = (est_gas_usage * gas_price) as f64;
 	let est_fee_f64 = est_gas_fee * gas_token_price * platform_payment_fee_multiplier / price_denom;
-	let est_fee_u256 = parse_human_fmt_to_u256(&est_fee_f64.to_string(), coin_decimals, false)?;
+	let est_fee_u256 = minimum_estimated_fee(parse_human_fmt_to_u256(
+		&est_fee_f64.to_string(),
+		coin_decimals,
+		false,
+	)?);
 
 	Ok((est_fee_u256, required_allowance_val))
+}
+
+/// Keep a valid payment quote non-zero after applying the platform multiplier and converting it
+/// to the fee token's base units. Very low testnet gas prices can otherwise truncate to zero.
+fn minimum_estimated_fee(fee: U256) -> U256 {
+	fee.max(U256::from(1_u8))
 }
 
 fn get_required_allowance(allowance: U256, target_amt: U256) -> U256 {
@@ -502,7 +512,7 @@ pub fn compute_est_fee_cw_bulkpay(
 	let fee = (numerator / denominator)
 		.checked_add(U256::from(u8::from(!(numerator % denominator).is_zero())))
 		.ok_or_eyre("Batch fee is too large")?;
-	fmt_output(fee, fee_coin.decimals())
+	fmt_output(minimum_estimated_fee(fee), fee_coin.decimals())
 }
 
 /// Compute Est. fee for NC Pay.
@@ -1596,6 +1606,35 @@ mod tests {
 		)
 		.unwrap();
 		assert_eq!(rows[0].est_fee, "0.000001");
+	}
+
+	#[test]
+	fn estimated_fees_never_truncate_to_zero() {
+		let mut custodial = custodial_prefetch_fixture();
+		custodial.gas_price = 0;
+		let custodial_rows =
+			custodial_batch_quote(&custodial, &[(StableCoin::USDT, "1".into())]).unwrap();
+		assert_eq!(custodial_rows[0].est_fee, "0.000001");
+
+		for gas_price in [0, 1] {
+			let params = PreOcpValuesNcwParams {
+				allowance: U256::MAX.to_string(),
+				balance: "100".into(),
+				gas_price,
+				gas_token_price: 3000.0,
+				coin_price: 1.0,
+				..Default::default()
+			};
+			let (.., est_fee) = compute_est_fee_ncw(
+				PreOcpPayload { chain: ChainName::Sepolia, coin: StableCoin::USDT },
+				"1",
+				&params,
+				false,
+				true,
+			)
+			.unwrap();
+			assert_eq!(est_fee, "0.000001");
+		}
 	}
 
 	#[test]
