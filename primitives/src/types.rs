@@ -149,9 +149,14 @@ pub struct AddContactPayload {
 /// Desired contact and optional contact-batch changes applied by one backend transaction.
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct UpsertContactsPayload {
-	/// New contacts. An already stored protocol/address identity is an idempotent no-op.
+	/// New contacts. An existing identity is a no-op unless `reject_existing` is true.
 	#[serde(default)]
 	pub contacts: Vec<AddContactPayload>,
+	/// Reject new contact identities already saved by this owner, including duplicates within
+	/// this request. Defaults to false for idempotent SDK callers; updates and saved batch IDs
+	/// are unaffected.
+	#[serde(default)]
+	pub reject_existing: bool,
 	/// Existing contacts to update by ID.
 	#[serde(default)]
 	pub updates: Vec<UpdateContactItem>,
@@ -2063,6 +2068,7 @@ mod public_payment_contract_tests {
 	fn bulk_payment_save_batch_is_required_while_contact_upsert_defaults_to_false() {
 		let contacts =
 			serde_json::from_value::<UpsertContactsPayload>(serde_json::json!({})).unwrap();
+		assert!(!contacts.reject_existing);
 		assert!(!contacts.save_batch);
 
 		let mut cw = serde_json::to_value(PayOnchainCwBulkRequest::default()).unwrap();

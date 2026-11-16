@@ -39,6 +39,7 @@ POST {{HOST}}/v1/contacts/{{USER_ID}}
             "is_own_wallet": false
         }
     ],
+    "reject_existing": true,
     "save_batch": true,
     "batch_name": "Payroll team"
 }
