@@ -12,12 +12,18 @@ Need direct HTTP access? Jump into the REST API docs → [Open API Docs](./api-h
 
 ## SDK
 
-### Rust
+| Language | SDK | Primitives | Examples |
+| --- | --- | --- | --- |
+| Rust | [`unifi-sdk-rs`](./sdk/rust/) | [`unifi-sdk-primitives`](./primitives/rust/) | [Rust examples](./examples/rust/examples/) |
+| TypeScript | [`unifi-sdk-ts`](./sdk/typescript/README.md) | [Types and helpers](./primitives/typescript/src/) | [TypeScript examples](./examples/typescript/) |
 
-Prefer type-safety and Rust-first workflows? Dive into our Rust SDK → [Rust SDK Guide](./sdk/)
+Install the TypeScript SDK from a commit that includes it in the public developer kit.
+Replace `COMMIT_SHA` with that commit's SHA.
 
-#### Primitives
+```sh
+npm install 'git+https://github.com/abhi3700/unifi-dev-kit.git#COMMIT_SHA'
+```
 
-Used across the UniFi codebase and designed to help you seamlessly integrate UniFi into your own platform.
-
-Follow [here](./primitives/)
+Import the client from `unifi-sdk-ts` and the shared types and helpers from `unifi-sdk-ts/primitives`.
+From this directory, run `npm ci` and `npm test` to build and test the TypeScript SDK.
+Run `cargo check --workspace` for the Rust workspace.

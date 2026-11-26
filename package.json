@@ -1,0 +1,43 @@
+{
+  "name": "unifi-sdk-ts",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the UniFi v1 API",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abhi3700/unifi-dev-kit.git"
+  },
+  "files": [
+    "dist",
+    "sdk/typescript/README.md"
+  ],
+  "types": "./dist/sdk/typescript/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/sdk/typescript/src/index.d.ts",
+      "default": "./dist/sdk/typescript/src/index.js"
+    },
+    "./primitives": {
+      "types": "./dist/primitives/typescript/src/index.d.ts",
+      "default": "./dist/primitives/typescript/src/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p sdk/typescript/tsconfig.json",
+    "prepare": "npm run build",
+    "test": "npm run build && npm run check:examples && node --test sdk/typescript/test/*.test.mjs",
+    "check:examples": "tsc -p examples/typescript/tsconfig.json",
+    "example:wallet": "node --env-file-if-exists=.env examples/typescript/wallet.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.3",
+    "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "viem": "^2.58.6"
+  }
+}

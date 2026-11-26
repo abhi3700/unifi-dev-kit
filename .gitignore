@@ -1,2 +1,7 @@
 Cargo.lock
 target/
+node_modules/
+/dist/
+/unifi-sdk-ts-*.tgz
+.env*
+!.env.template

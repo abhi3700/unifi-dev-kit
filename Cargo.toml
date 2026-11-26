@@ -1,10 +1,10 @@
 [workspace]
 members = [
-    "sdk",
-    "primitives",
-    "examples",
+    "sdk/rust",
+    "primitives/rust",
+    "examples/rust",
 ]
 resolver = "2"
 
 [workspace.dependencies]
-unifi-sdk-primitives = { path = "primitives/" }
+unifi-sdk-primitives = { path = "primitives/rust" }

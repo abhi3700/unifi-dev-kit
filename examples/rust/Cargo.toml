@@ -1,0 +1,55 @@
+[package]
+name = "unifi-examples"
+version = "0.1.0"
+edition = "2024"
+
+# ======= Pay =======
+
+[[example]]
+name = "fetch_bal_fee"
+path = "examples/pay/fetch_bal_fee.rs"
+
+[[example]]
+name = "faucet_request"
+path = "examples/pay/faucet_request.rs"
+
+[[example]]
+name = "pay"
+path = "examples/pay/pay.rs"
+
+[[example]]
+name = "bulk_pay"
+path = "examples/pay/bulk_pay.rs"
+
+[[example]]
+name = "pay_receipt"
+path = "examples/pay/pay_receipt.rs"
+
+[[example]]
+name = "pay_history"
+path = "examples/pay/pay_history.rs"
+
+# ======= Wallet =======
+
+[[example]]
+name = "wallet_balances"
+path = "examples/wallet/balances.rs"
+
+[[example]]
+name = "wallet_address"
+path = "examples/wallet/address.rs"
+
+[[example]]
+name = "wallet_addresses"
+path = "examples/wallet/addresses.rs"
+
+
+[dependencies]
+chrono = "0.4.40"
+colored = "3.0.0"
+dotenvy = "0.15.7"
+eyre = "0.6.12"
+spinoff = {version = "0.8.0",features = ["arc", "line", "dots"]}
+tokio = { version =  "1.46.1", features = ["rt-multi-thread"] }
+unifi-sdk-rs ={ path = "../../sdk/rust" }
+unifi-sdk-primitives = {workspace = true, features = ["utils"]}

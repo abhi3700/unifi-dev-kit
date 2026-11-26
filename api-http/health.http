@@ -1,16 +1,12 @@
 ### Health
 @name = Health
-@details = Check API availability and dependency health.
+@details = Check API health.
 
 ### Environment Variables
 @HOST={{base_url}}
 @AUTH_HEADER=Authorization: Bearer {{api_key}}
 
-### fast 🏎️: API is live or not
-# @name Healthz
-GET {{HOST}}/v1/healthz
-
-### slow 🐢: Checks all its dependencies: DBs, Node RPC, ..
+### Check API health
 # @name HealthCheck
 GET {{HOST}}/v1/health
 {{AUTH_HEADER}}
