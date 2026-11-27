@@ -41,6 +41,18 @@ test("reuses address validation, including the Rust SDK's wallet address shortcu
   assert.deepEqual(calls, []);
 });
 
+test("reads account credits using the key owner's user ID", async () => {
+  const data = {
+    metadata: { plan: "Free", duration: "Month", credits: 0, img_credits: 10, expiry_at: 1900000000 },
+    keys: [{ name: "quota-alerts", created_at: 1899000000 }],
+  };
+  const { client, calls } = setup(() => Response.json({ status: "200 OK", data }));
+  assert.deepEqual(await client.getApiAccount("owner+alerts@example.com"), data);
+  assert.equal(new URL(calls[0].url).pathname, "/v1/api/owner%2Balerts%40example.com");
+  assert.equal(calls[0].method, "GET");
+  assert.equal(calls[0].headers.get("authorization"), "Bearer test-key");
+});
+
 test("posts the managed payment wire format and returns a receipt ID", async () => {
   const request = {
     payload: {

@@ -1,7 +1,7 @@
 # unifi-sdk-ts
 
-TypeScript client for the UniFi v1 API. `UnifiClient` exposes API key management, wallet
-authentication, contacts and contact batches, profiles, sessions, wallet balances, and
+TypeScript client for the UniFi v1 API. `UnifiClient` exposes wallet authentication,
+contacts and contact batches, profile reads, sessions, wallet balances, and
 managed and self-custodial payments. Payment methods cover preflight, single and bulk
 submission, merchant checkout, Permit2, testnet faucet requests, receipts, and history.
 
@@ -19,10 +19,15 @@ const unifi = new UnifiClient({ apiKey });
 const balances = await unifi.getWalletBalances(userId);
 ```
 
-Keep the API key on your server. The wallet challenge and proof exchange can use a
+Sign in to the [UniFi API page](https://payunifi.com/app/api) to create a key and keep it
+on your server. The wallet challenge and proof exchange can use a
 client constructed without a key. Set `baseUrl` for local or staging environments.
 The client accepts the service root or a URL ending in `/v1`. Use strings for amounts
 and balances to preserve decimal precision.
+
+For quota alerts, read `(await unifi.getApiAccount(userId)).metadata.credits` from your
+backend. Pass the user ID of the account that owns the API key. Each read costs one API
+credit and returns the balance after the charge. Requests fail when the quota is exhausted.
 
 Import shared API types and validators through `unifi-sdk-ts/primitives`.
 

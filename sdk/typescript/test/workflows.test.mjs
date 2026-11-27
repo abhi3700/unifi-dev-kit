@@ -73,19 +73,13 @@ test("wallet auth requests omit bearer auth and can start without an API key", a
   assert.equal(calls.length, 2);
 });
 
-test("contact and account mutations preserve DELETE bodies and handle responses without data", async () => {
+test("deleting a contact batch sends a DELETE body and handles a response without data", async () => {
   const { client, calls } = setup(() => Response.json({ status: "200 OK", message: "Done" }));
   await client.deleteContactBatch("alice", "a/b", false);
-  await client.setUserProfile("alice", { nickname: "Al" });
-  await client.deleteApiKey("alice", "my key");
 
   assert.equal(calls[0].method, "DELETE");
   assert.equal(new URL(calls[0].url).pathname, "/v1/contact_batches/alice/a%2Fb");
   assert.deepEqual(await calls[0].json(), { del_its_contacts: false });
-  assert.equal(calls[1].method, "POST");
-  assert.deepEqual(await calls[1].json(), { nickname: "Al" });
-  assert.equal(calls[2].method, "DELETE");
-  assert.equal(new URL(calls[2].url).pathname, "/v1/api_key/del/alice/my%20key");
 });
 
 test("single self-custodial payment uses separate Permit2 and submission wire bodies", async () => {
