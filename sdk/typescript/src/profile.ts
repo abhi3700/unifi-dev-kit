@@ -8,8 +8,5 @@ export function profileMethods(transport: Transport) {
     getUserProfile(userId: string): Promise<UserProfile> {
       return transport.request(`/profile/${pathSegment(userId)}`);
     },
-    setUserProfile(userId: string, body: UserProfile): Promise<void> {
-      return transport.requestVoid(`/profile/${pathSegment(userId)}`, { method: "POST", body });
-    },
   };
 }

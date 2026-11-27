@@ -22,17 +22,14 @@ pub enum ApiHandler {
 	/* Health */
 	HealthCheck,
 
-	/* API Key for User */
-	GenerateApiKey,
+	/* API account */
 	GetApi,
-	DelApiKey,
 
 	/* Auth */
 	CreateNcAuthChallenge,
 	GenerateJwtForNc,
 
 	/* Profile */
-	SetUserProfile,
 	GetUserProfile,
 
 	/* Contacts */
@@ -92,17 +89,15 @@ impl ApiHandler {
 			/* Health */
 			AH::HealthCheck => "/health",
 
-			/* API Key for User */
-			AH::GenerateApiKey => "/api_key/generate/{user_id}/{name}",
+			/* API account */
 			AH::GetApi => "/api/{user_id}",
-			AH::DelApiKey => "/api_key/del/{user_id}/{name}",
 
 			/* Auth */
 			AH::CreateNcAuthChallenge => "/auth/challenge/{address}",
 			AH::GenerateJwtForNc => "/auth/generate_jwt/{address}",
 
 			/* Profile */
-			AH::SetUserProfile | AH::GetUserProfile => "/profile/{user_id}",
+			AH::GetUserProfile => "/profile/{user_id}",
 
 			/* Contacts */
 			AH::GetUserContacts | AH::UpsertContacts | AH::DeleteContacts => "/contacts/{user_id}",
@@ -228,6 +223,7 @@ mod tests {
 	fn public_api_paths_are_relative_and_versionable() {
 		let expected = [
 			(AH::HealthCheck, "/health"),
+			(AH::GetApi, "/api/{user_id}"),
 			(AH::UpsertContacts, "/contacts/{user_id}"),
 			(AH::GetContactBatches, "/contact_batches/{user_id}"),
 			(AH::GetContactBatch, "/contact_batches/{user_id}/{batch_id}"),
@@ -289,7 +285,7 @@ mod tests {
 			),
 		];
 
-		assert_eq!(expected.len(), 33);
+		assert_eq!(expected.len(), 34);
 		for (handler, path) in expected {
 			assert_eq!(handler.path(), path);
 			assert_eq!(handler.versioned_path(ApiVersion::V1), format!("/v1{path}"));
