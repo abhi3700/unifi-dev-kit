@@ -40,7 +40,8 @@ For self-custodial payments, `toPermit2TypedData` converts the permit response t
 `signTypedData` input. The wallet signs it and the application submits the signature
 with the decimal nonce using a self-custodial payment method.
 
-The [wallet and payment examples](../../examples/typescript/README.md) run from the
-developer kit root with Node 22.18 or later.
+The [TypeScript examples](../../examples/typescript/README.md) run from the developer
+kit root with Node 22.18 or later. The [Permit2 guide](../../examples/self-custodial-payments.md)
+walks through allowance reuse, signing, and submitting single and bulk payments.
 
 `npm pack` from the developer kit root builds the SDK and packages both exports for local installation.
