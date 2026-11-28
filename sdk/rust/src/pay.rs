@@ -62,8 +62,8 @@ impl Sdk {
 		Sdk::process_response::<String>(resp).await
 	}
 
-	/// Fetch the pre-ocp est. total fees for the given coin & chain in case of on-chain
-	/// payment (OCP) by the user.
+	/// Estimate the stablecoin fee for a network and asset.
+	/// Self-custodial wallets get the estimate shown before a payment amount is entered.
 	pub async fn fetch_pre_ocp_total_est_fee(
 		&self,
 		user_id: &str,

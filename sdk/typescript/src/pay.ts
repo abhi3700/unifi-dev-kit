@@ -43,6 +43,7 @@ export function paymentMethods(transport: Transport) {
     getPaymentNetBalance(userId: string, chain: ChainName, coin: StableCoin): Promise<string> {
       return transport.request(`${onchain}/net_balance/${paymentPair(userId, chain, coin)}`);
     },
+    /** Estimates the stablecoin fee before an amount is entered for self-custodial wallets. */
     getEstimatedPaymentFee(userId: string, chain: ChainName, coin: StableCoin): Promise<string> {
       return transport.request(`${onchain}/est_fee/${paymentPair(userId, chain, coin)}`);
     },
