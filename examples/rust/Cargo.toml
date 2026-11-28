@@ -29,6 +29,14 @@ path = "examples/pay/pay_receipt.rs"
 name = "pay_history"
 path = "examples/pay/pay_history.rs"
 
+[[example]]
+name = "self_custodial_pay"
+path = "examples/pay/self_custodial_pay.rs"
+
+[[example]]
+name = "self_custodial_bulk_pay"
+path = "examples/pay/self_custodial_bulk_pay.rs"
+
 # ======= Wallet =======
 
 [[example]]
@@ -43,6 +51,15 @@ path = "examples/wallet/address.rs"
 name = "wallet_addresses"
 path = "examples/wallet/addresses.rs"
 
+# ======= Miscellaneous =======
+
+[[example]]
+name = "api_credits"
+path = "examples/misc/api_credits.rs"
+
+[[example]]
+name = "contacts"
+path = "examples/misc/contacts.rs"
 
 [dependencies]
 chrono = "0.4.40"
@@ -53,3 +70,8 @@ spinoff = {version = "0.8.0",features = ["arc", "line", "dots"]}
 tokio = { version =  "1.46.1", features = ["rt-multi-thread"] }
 unifi-sdk-rs ={ path = "../../sdk/rust" }
 unifi-sdk-primitives = {workspace = true, features = ["utils"]}
+
+[dev-dependencies]
+alloy-primitives = { version = "1.5.7", features = ["k256"] }
+alloy-sol-types = "1.5.7"
+k256 = "0.13.4"

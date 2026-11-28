@@ -26,6 +26,27 @@ node --env-file-if-exists=.env examples/typescript/pay/pay_receipt.ts RECEIPT_ID
 node --env-file-if-exists=.env examples/typescript/pay/pay_history.ts USER_ID
 ```
 
-The single and bulk payment examples show preflight by default. Append `--submit`
-to send the payment. For the next history page, pass the last receipt ID as the
-second argument to `pay_history.ts`.
+The managed single and bulk payment examples show preflight by default. Append
+`--submit` to send the payment. For the next history page, pass the last receipt ID
+as the second argument to `pay_history.ts`.
+
+### Self-custodial payments
+
+See the [Permit2 guide](../self-custodial-payments.md) for wallet setup, ERC-20
+approval, and signing. The examples preflight by default and submit with `--submit`.
+
+```sh
+node --env-file-if-exists=.env examples/typescript/pay/self_custodial_pay.ts "$PAYER" Sepolia "$RECIPIENT_1" 1 USDC
+node --env-file-if-exists=.env examples/typescript/pay/self_custodial_bulk_pay.ts "$PAYER" Sepolia "$RECIPIENT_1" 1 USDC "$RECIPIENT_2" 2 DAI
+```
+
+## Miscellaneous
+
+```sh
+node --env-file-if-exists=.env examples/typescript/misc/api_credits.ts "$KEY_OWNER_USER_ID"
+node --env-file-if-exists=.env examples/typescript/misc/contacts.ts "$USER_ID"
+node --env-file-if-exists=.env examples/typescript/misc/contacts.ts "$USER_ID" "$NEXT_CURSOR"
+```
+
+The credit check costs one API credit and reports the balance after that charge.
+The contacts example reads one filtered page and prints the cursor for the next page.
